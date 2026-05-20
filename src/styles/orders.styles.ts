@@ -1,0 +1,43 @@
+import { StyleSheet } from "react-native";
+import { AppColors, FontFamily, FontSize, Spacing, MaxContentWidth } from "@/constants/theme";
+
+const C = AppColors;
+
+export const ordersStyles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: C.lightBg },
+  centered: { justifyContent: "center", alignItems: "center" },
+  safeArea: { flex: 1, maxWidth: MaxContentWidth, width: "100%", alignSelf: "center" },
+  header: { paddingHorizontal: Spacing.four, paddingVertical: Spacing.three, alignItems: "flex-end" },
+  headerTitle: { fontSize: FontSize.h3, fontFamily: FontFamily.bold, color: C.textDark },
+  filterBar: { flexDirection: "row", paddingHorizontal: Spacing.four, marginBottom: Spacing.three, gap: Spacing.two },
+  filterBtn: { flex: 1, height: 40, borderRadius: 12, justifyContent: "center", alignItems: "center" },
+  filterText: { fontSize: FontSize.md, fontFamily: FontFamily.bold },
+  listContent: { paddingBottom: 110, gap: Spacing.three },
+  card: { marginHorizontal: Spacing.four, borderRadius: 16, padding: Spacing.three + 2, borderWidth: 1, borderColor: C.border, backgroundColor: C.white, shadowColor: "#000", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.03, shadowRadius: 6, elevation: 2 },
+  cardHeader: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" },
+  statusBadge: { paddingHorizontal: Spacing.two + 2, paddingVertical: Spacing.half - 1, borderRadius: 8 },
+  statusText: { fontSize: FontSize.xs, fontFamily: FontFamily.bold },
+  orderId: { fontSize: FontSize.md, fontFamily: FontFamily.bold, color: C.textDark },
+  orderDate: { fontSize: FontSize.xs, marginTop: Spacing.half, color: C.textMuted, textAlign: "right" },
+  divider: { height: 1, backgroundColor: C.border, marginVertical: Spacing.two },
+  productsList: { gap: Spacing.one },
+  productRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  productName: { fontSize: FontSize.sm, color: C.textDark, fontFamily: FontFamily.medium },
+  productPrice: { fontSize: FontSize.sm, color: C.textMuted },
+  totalRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  totalLabel: { fontSize: FontSize.md, fontFamily: FontFamily.bold, color: C.textDark },
+  totalValue: { fontSize: FontSize.lg, fontFamily: FontFamily.bold, color: C.primary },
+  driverCard: { marginTop: Spacing.three, padding: Spacing.two + 2, borderRadius: 12, backgroundColor: C.bgElement },
+  driverInfoContainer: { flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-between" },
+  driverTextContainer: { alignItems: "flex-end" },
+  driverName: { fontSize: FontSize.md, fontFamily: FontFamily.bold, color: C.textDark },
+  driverVehicle: { fontSize: FontSize.xs, color: C.textMuted, marginTop: 2 },
+  driverActions: { flexDirection: "row", gap: Spacing.one },
+  driverBtn: { paddingHorizontal: Spacing.three, paddingVertical: Spacing.one + 2, borderRadius: 8 },
+  callBtn: { backgroundColor: "#2196F3" },
+  waBtn: { backgroundColor: "#4CAF50" },
+  driverBtnText: { color: C.white, fontSize: FontSize.xs, fontFamily: FontFamily.bold },
+  driverWaiting: { fontSize: FontSize.xs, color: C.textMuted, textAlign: "right" },
+  emptyContainer: { paddingVertical: Spacing.six, justifyContent: "center", alignItems: "center" },
+  emptyText: { fontSize: FontSize.md, color: C.textMuted, textAlign: "center" },
+});

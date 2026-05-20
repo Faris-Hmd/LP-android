@@ -41,3 +41,15 @@ app-example
 # generated native folders
 /ios
 /android
+
+# Local test builds and extractions
+test.apk
+test.zip
+test_extracted/
+debug.keystore.backup
+
+# Environment files
+.env
+
+# Firebase config
+google-services.json

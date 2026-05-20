@@ -1,6 +1,6 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * Design tokens — single source of truth for colors, typography & spacing.
+ * Import AppColors, FontSize, FontFamily instead of defining local hex constants.
  */
 
 import '@/global.css';
@@ -63,3 +63,42 @@ export const Spacing = {
 
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
 export const MaxContentWidth = 800;
+
+// ─── App-wide colour palette ─────────────────────────────────────────────────
+export const AppColors = {
+  primary:      '#E53E3E',
+  primaryLight: 'rgba(229, 62, 62, 0.08)',
+  white:        '#FFFFFF',
+  lightBg:      '#F9FAFB',
+  bgElement:    '#F3F4F6',
+  textDark:     '#1F2937',
+  textMuted:    '#6B7280',
+  border:       '#E5E7EB',
+  success:      '#10B981',
+  danger:       '#DC2626',
+  warning:      '#D97706',
+  info:         '#2563EB',
+} as const;
+
+// ─── Typography scale ─────────────────────────────────────────────────────────
+export const FontSize = {
+  xxs: 8,
+  xs:  10,
+  sm:  11,
+  md:  12,
+  base: 13,
+  lg:  14,
+  xl:  16,
+  xxl: 18,
+  h3:  20,
+  h2:  22,
+  h1:  26,
+} as const;
+
+// ─── Font families (Cairo loaded in _layout.tsx) ─────────────────────────────
+export const FontFamily = {
+  regular:  'Cairo-Regular',
+  medium:   'Cairo-Medium',
+  semiBold: 'Cairo-SemiBold',
+  bold:     'Cairo-Bold',
+} as const;

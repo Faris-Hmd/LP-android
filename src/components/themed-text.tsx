@@ -32,42 +32,43 @@ export function ThemedText({ style, type = 'default', themeColor, ...rest }: The
 
 const styles = StyleSheet.create({
   small: {
-    fontSize: 14,
+    fontFamily: 'Cairo-Medium',
+    fontSize: 12,
     lineHeight: 20,
-    fontWeight: 500,
   },
   smallBold: {
-    fontSize: 14,
+    fontFamily: 'Cairo-Bold',
+    fontSize: 12,
     lineHeight: 20,
-    fontWeight: 700,
   },
   default: {
-    fontSize: 16,
+    fontFamily: 'Cairo-Regular',
+    fontSize: 14,
     lineHeight: 24,
-    fontWeight: 500,
   },
   title: {
-    fontSize: 48,
-    fontWeight: 600,
-    lineHeight: 52,
+    fontFamily: 'Cairo-Bold',
+    fontSize: 34,
+    lineHeight: 44,
   },
   subtitle: {
-    fontSize: 32,
-    lineHeight: 44,
-    fontWeight: 600,
+    fontFamily: 'Cairo-SemiBold',
+    fontSize: 22,
+    lineHeight: 32,
   },
   link: {
+    fontFamily: 'Cairo-Medium',
     lineHeight: 30,
-    fontSize: 14,
+    fontSize: 12,
   },
   linkPrimary: {
+    fontFamily: 'Cairo-Medium',
     lineHeight: 30,
-    fontSize: 14,
+    fontSize: 12,
     color: '#3c87f7',
   },
   code: {
     fontFamily: Fonts.mono,
-    fontWeight: Platform.select({ android: 700 }) ?? 500,
-    fontSize: 12,
+    fontSize: 10,
   },
 });
