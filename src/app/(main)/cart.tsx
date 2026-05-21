@@ -267,7 +267,7 @@ export default function CartScreen() {
                       style={styles.cartItemCard}
                       entering={FadeInRight.duration(300)}
                       exiting={FadeOutLeft.duration(300)}
-                      layout={LinearTransition.springify().damping(15)}
+                      layout={LinearTransition.duration(200)}
                     >
                       <Image source={{ uri: imageUri }} style={styles.cartItemImage} contentFit="cover" />
                       <View style={styles.cartItemDetails}>

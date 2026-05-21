@@ -50,7 +50,14 @@
         }
       ],
       "@react-native-google-signin/google-signin/app.plugin.js",
-      "expo-build-properties"
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "reactNativeArchitectures": ["arm64-v8a"]
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

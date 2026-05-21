@@ -33,6 +33,13 @@ export function clearProductCache(): void {
 }
 
 /**
+ * Synchronously retrieves all products from the memory cache.
+ */
+export function getCachedProducts(): ProductType[] | null {
+  return cachedProducts;
+}
+
+/**
  * Synchronously retrieves a product from the memory cache by ID.
  */
 export function getCachedProductById(id: string): ProductType | undefined {

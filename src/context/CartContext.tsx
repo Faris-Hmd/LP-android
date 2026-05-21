@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useMemo } from "react";
+import React, { createContext, useContext, useState, useMemo, useCallback } from "react";
 import { ProductType } from "@/types";
 
 export type { ProductType };
@@ -18,7 +18,7 @@ const CartContext = createContext<CartContextProps | undefined>(undefined);
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [cart, setCart] = useState<ProductType[]>([]);
 
-  const addToCart = (product: ProductType) => {
+  const addToCart = useCallback((product: ProductType) => {
     setCart((prev) => {
       const existing = prev.find((item) => item.id === product.id);
       if (existing) {
@@ -28,25 +28,25 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       return [...prev, { ...product, p_qu: 1 }];
     });
-  };
+  }, []);
 
-  const removeFromCart = (id: string) => {
+  const removeFromCart = useCallback((id: string) => {
     setCart((prev) => prev.filter((item) => item.id !== id));
-  };
+  }, []);
 
-  const updateQuantity = (id: string, qty: number) => {
+  const updateQuantity = useCallback((id: string, qty: number) => {
     if (qty <= 0) {
-      removeFromCart(id);
+      setCart((prev) => prev.filter((item) => item.id !== id));
       return;
     }
     setCart((prev) =>
       prev.map((item) => (item.id === id ? { ...item, p_qu: qty } : item))
     );
-  };
+  }, []);
 
-  const clearCart = () => {
+  const clearCart = useCallback(() => {
     setCart([]);
-  };
+  }, []);
 
   const cartCount = useMemo(() => {
     return cart.reduce((acc, item) => acc + (item.p_qu || 1), 0);
@@ -59,18 +59,18 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, 0);
   }, [cart]);
 
+  const contextValue = useMemo(() => ({
+    cart,
+    addToCart,
+    removeFromCart,
+    updateQuantity,
+    clearCart,
+    cartCount,
+    totalAmount,
+  }), [cart, addToCart, removeFromCart, updateQuantity, clearCart, cartCount, totalAmount]);
+
   return (
-    <CartContext.Provider
-      value={{
-        cart,
-        addToCart,
-        removeFromCart,
-        updateQuantity,
-        clearCart,
-        cartCount,
-        totalAmount,
-      }}
-    >
+    <CartContext.Provider value={contextValue}>
       {children}
     </CartContext.Provider>
   );
