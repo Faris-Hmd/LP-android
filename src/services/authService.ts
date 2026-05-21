@@ -1,10 +1,21 @@
-import { getAuth, onAuthStateChanged, signInWithCredential, GoogleAuthProvider, signOut, FirebaseAuthTypes } from "@react-native-firebase/auth";
-import { GoogleSignin, statusCodes } from "@react-native-google-signin/google-signin";
+import {
+  FirebaseAuthTypes,
+  getAuth,
+  GoogleAuthProvider,
+  onAuthStateChanged,
+  signInWithCredential,
+  signOut,
+} from "@react-native-firebase/auth";
+import {
+  GoogleSignin,
+  statusCodes,
+} from "@react-native-google-signin/google-signin";
 
 // ─── Configuration ─────────────────────────────────────────────────────────
 GoogleSignin.configure({
-  webClientId: "170352568774-r20qmi9gtdnb8fb7fjauh55c5t0ejd1q.apps.googleusercontent.com",
-  offlineAccess: true,
+  webClientId:
+    "170352568774-r20qmi9gtdnb8fb7fjauh55c5t0ejd1q.apps.googleusercontent.com",
+  // offlineAccess: true,
 });
 
 // ─── Get the currently signed-in user (sync) ─────────────────────────────────
@@ -14,7 +25,7 @@ export function getCurrentUser(): FirebaseAuthTypes.User | null {
 
 // ─── Subscribe to auth state changes ─────────────────────────────────────────
 export function subscribeToAuthChanges(
-  callback: (user: FirebaseAuthTypes.User | null) => void
+  callback: (user: FirebaseAuthTypes.User | null) => void,
 ): () => void {
   return onAuthStateChanged(getAuth(), callback);
 }
@@ -29,8 +40,11 @@ export async function signInWithGoogle(): Promise<void> {
   await signInWithCredential(getAuth(), credential);
 }
 
+import { clearProductCache } from "./productService";
+
 // ─── Sign out ─────────────────────────────────────────────────────────────────
 export async function signOutUser(): Promise<void> {
+  clearProductCache();
   await signOut(getAuth());
 }
 

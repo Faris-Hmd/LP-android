@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   TouchableOpacity,
   View,
@@ -7,11 +7,17 @@ import {
   ActivityIndicator,
   Alert,
   Clipboard,
+  Modal,
+  StyleSheet,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
+import Animated, { FadeInRight, FadeOutLeft, LinearTransition } from "react-native-reanimated";
+import MapView, { Region, UrlTile } from "react-native-maps";
+import * as Location from "expo-location";
 
 import { ThemedText } from "@/components/themed-text";
 import { Spacing, AppColors } from "@/constants/theme";
@@ -42,6 +48,94 @@ export default function CartScreen() {
   const [zip, setZip] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("bankak");
   const [transactionRef, setTransactionRef] = useState("");
+
+  const [isMapVisible, setIsMapVisible] = useState(false);
+  const [mapRegion, setMapRegion] = useState<Region | null>(null);
+  const [mapAddress, setMapAddress] = useState("");
+  const [mapCity, setMapCity] = useState("");
+  const [isGeocoding, setIsGeocoding] = useState(false);
+  const mapViewRef = useRef<MapView>(null);
+
+  const handleOpenMapPicker = async () => {
+    setIsMapVisible(true);
+    try {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("تنبيه", "يرجى تفعيل صلاحية الوصول للموقع الجغرافي لتحديد عنوان التوصيل.");
+        return;
+      }
+      
+      let loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+
+      const initialRegion: Region = {
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+        latitudeDelta: 0.00922,
+        longitudeDelta: 0.00421,
+      };
+
+      setMapRegion(initialRegion);
+      geocodeCoordinates(loc.coords.latitude, loc.coords.longitude);
+    } catch (error) {
+      console.error("Error getting location:", error);
+    }
+  };
+
+  const geocodeCoordinates = async (lat: number, lng: number) => {
+    setIsGeocoding(true);
+    try {
+      const response = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
+      if (response && response.length > 0) {
+        const item = response[0];
+        const street = item.street || item.name || "";
+        const district = item.district || "";
+        const cityName = item.city || item.subregion || "";
+        
+        const formattedAddress = [street, district].filter(Boolean).join(" - ");
+        setMapAddress(formattedAddress || "موقع محدد على الخريطة");
+        setMapCity(cityName || "الخرطوم");
+      } else {
+        setMapAddress("موقع غير معروف");
+      }
+    } catch (error) {
+      setMapAddress("فشل تحديد العنوان الجغرافي");
+    } finally {
+      setIsGeocoding(false);
+    }
+  };
+
+  const handleRegionChangeComplete = (newRegion: Region) => {
+    setMapRegion(newRegion);
+    geocodeCoordinates(newRegion.latitude, newRegion.longitude);
+  };
+
+  const handleCenterOnUser = async () => {
+    try {
+      let loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      mapViewRef.current?.animateToRegion({
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+        latitudeDelta: 0.00922,
+        longitudeDelta: 0.00421,
+      });
+    } catch (error) {
+      console.error("Error centering map:", error);
+    }
+  };
+
+  const handleConfirmLocation = () => {
+    if (mapAddress) {
+      setAddress(mapAddress);
+    }
+    if (mapCity) {
+      setCity(mapCity);
+    }
+    setIsMapVisible(false);
+  };
 
   // Load user shipping details
   useEffect(() => {
@@ -120,50 +214,61 @@ export default function CartScreen() {
     }
   };
 
-  if (cart.length === 0) {
-    return (
-      <View style={styles.container}>
-        <SafeAreaView style={[styles.safeArea, styles.centered]}>
+  return (
+    <View style={styles.container}>
+      <View style={styles.headerContainer}>
+        <LinearGradient
+          colors={["#FFEBEB", "#FFF3E3"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+        <SafeAreaView edges={["top"]}>
+          <View style={styles.header}>
+            <ThemedText style={styles.headerTitle}>سلة المشتريات</ThemedText>
+            {cart.length > 0 && ((address.trim() || city.trim()) ? (
+              <ThemedText style={styles.headerSubtitle}>
+                التوصيل إلى: {address.trim()}، {city.trim()}
+              </ThemedText>
+            ) : (
+              <ThemedText style={styles.headerSubtitle}>
+                لم يتم تحديد عنوان التوصيل بعد
+              </ThemedText>
+            ))}
+          </View>
+        </SafeAreaView>
+      </View>
+
+      {cart.length === 0 ? (
+        <View style={[styles.mainContent, styles.centered]}>
           <Feather name="shopping-cart" size={48} color="#9CA3AF" style={{ marginBottom: 16 }} />
           <ThemedText style={styles.emptyTitle}>سلة المشتريات فارغة</ThemedText>
           <ThemedText style={styles.emptySubtitle}>
             تصفح القائمة وأضف وجباتك المفضلة لتظهر هنا.
           </ThemedText>
-          <TouchableOpacity style={styles.shopBtn} onPress={() => router.replace("/")}>
+          <TouchableOpacity style={styles.shopBtn} onPress={() => router.replace("/" as any)}>
             <ThemedText style={styles.shopBtnText}>ابدأ الطلب الآن</ThemedText>
           </TouchableOpacity>
-        </SafeAreaView>
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.header}>
-          <ThemedText style={styles.headerTitle}>سلة المشتريات</ThemedText>
-          {(address.trim() || city.trim()) ? (
-            <ThemedText style={styles.headerSubtitle}>
-              التوصيل إلى: {address.trim()}، {city.trim()}
-            </ThemedText>
-          ) : (
-            <ThemedText style={styles.headerSubtitle}>
-              لم يتم تحديد عنوان التوصيل بعد
-            </ThemedText>
-          )}
         </View>
-
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {!showCheckout ? (
-            <>
-              {/* Cart List */}
-              <View style={styles.listContainer}>
+      ) : (
+        <View style={styles.mainContent}>
+          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            {!showCheckout ? (
+              <>
+                {/* Cart List */}
+                <View style={styles.listContainer}>
                 {cart.map((item) => {
                   const imageUri = (item.p_imgs && item.p_imgs.length > 0 && item.p_imgs[0].url)
                     || "https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=300";
                   const price = parseFloat(item.p_cost as string) || 0;
                   return (
-                    <View key={item.id} style={styles.cartItemCard}>
+                    <Animated.View
+                      key={item.id}
+                      style={styles.cartItemCard}
+                      entering={FadeInRight.duration(300)}
+                      exiting={FadeOutLeft.duration(300)}
+                      layout={LinearTransition.springify().damping(15)}
+                    >
                       <Image source={{ uri: imageUri }} style={styles.cartItemImage} contentFit="cover" />
                       <View style={styles.cartItemDetails}>
                         <ThemedText style={styles.cartItemName}>{item.p_name}</ThemedText>
@@ -182,7 +287,7 @@ export default function CartScreen() {
                       <TouchableOpacity style={styles.deleteBtn} onPress={() => removeFromCart(item.id)}>
                         <Feather name="trash-2" size={20} color={C.danger} />
                       </TouchableOpacity>
-                    </View>
+                    </Animated.View>
                   );
                 })}
               </View>
@@ -225,7 +330,18 @@ export default function CartScreen() {
                   <TextInput style={styles.input} placeholder="أدخل رقم الهاتف..." placeholderTextColor={C.textMuted} value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
 
                   <ThemedText style={styles.label}>عنوان الشارع</ThemedText>
-                  <TextInput style={styles.input} placeholder="مثال: شارع النيل، عمارة 4..." placeholderTextColor={C.textMuted} value={address} onChangeText={setAddress} />
+                  <View style={styles.addressInputRow}>
+                    <TextInput
+                      style={[styles.input, styles.addressInput]}
+                      placeholder="مثال: شارع النيل، عمارة 4..."
+                      placeholderTextColor={C.textMuted}
+                      value={address}
+                      onChangeText={setAddress}
+                    />
+                    <TouchableOpacity style={styles.mapPickerBtn} onPress={handleOpenMapPicker}>
+                      <Feather name="map-pin" size={20} color={C.primary} />
+                    </TouchableOpacity>
+                  </View>
 
                   <View style={styles.rowInputs}>
                     <View style={{ flex: 1 }}>
@@ -302,7 +418,62 @@ export default function CartScreen() {
             </View>
           )}
         </ScrollView>
-      </SafeAreaView>
+      </View>
+      )}
+
+      <Modal visible={isMapVisible} animationType="slide" onRequestClose={() => setIsMapVisible(false)}>
+        <SafeAreaView style={styles.modalContainer} edges={["top", "bottom"]}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity style={styles.closeBtn} onPress={() => setIsMapVisible(false)}>
+              <Feather name="x" size={24} color={C.textDark} />
+            </TouchableOpacity>
+            <ThemedText style={styles.modalTitle}>تحديد موقع التوصيل</ThemedText>
+            <View style={{ width: 32 }} />
+          </View>
+          
+          <View style={styles.mapWrapper}>
+            {mapRegion && (
+              <MapView
+                ref={mapViewRef}
+                style={styles.mapView}
+                initialRegion={mapRegion}
+                onRegionChangeComplete={handleRegionChangeComplete}
+                mapType="none"
+              >
+                <UrlTile
+                  urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  maximumZ={19}
+                  tileSize={256}
+                />
+              </MapView>
+            )}
+            
+            {/* Centered pinpoint marker */}
+            <View style={styles.markerFixed} pointerEvents="none">
+              <Feather name="map-pin" size={40} color={C.primary} />
+            </View>
+
+            {/* GPS Locate Button */}
+            <TouchableOpacity style={styles.gpsBtn} onPress={handleCenterOnUser}>
+              <Feather name="crosshair" size={24} color={C.textDark} />
+            </TouchableOpacity>
+
+            {/* Address Overlay Card */}
+            <View style={styles.mapOverlayCard}>
+              <ThemedText style={styles.mapOverlayTitle}>موقع التوصيل المحدد</ThemedText>
+              {isGeocoding ? (
+                <ActivityIndicator size="small" color={C.primary} style={{ marginVertical: Spacing.one }} />
+              ) : (
+                <ThemedText style={styles.mapOverlayAddress}>{mapAddress || "يرجى تحريك الخريطة لتحديد الموقع..."}</ThemedText>
+              )}
+              
+              <TouchableOpacity style={styles.mapConfirmBtn} onPress={handleConfirmLocation} disabled={isGeocoding}>
+                <ThemedText style={styles.mapConfirmText}>تأكيد هذا العنوان</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </SafeAreaView>
+      </Modal>
     </View>
   );
 }

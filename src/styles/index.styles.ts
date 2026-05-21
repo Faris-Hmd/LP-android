@@ -2,7 +2,7 @@ import { StyleSheet, Dimensions } from "react-native";
 import { AppColors, FontFamily, FontSize, Spacing } from "@/constants/theme";
 
 const { width } = Dimensions.get("window");
-export const cardWidth = (width - 36) / 2;
+export const cardWidth = 230;
 
 const C = AppColors;
 
@@ -18,25 +18,30 @@ export const indexStyles = StyleSheet.create({
     backgroundColor: C.lightBg,
   },
   // ─── Absolute translucent header ───────────────────────────────────────────
-  blurHeader: {
+  headerContainer: {
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     zIndex: 10,
+    backgroundColor: "#FFEBEB",
     borderBottomWidth: 1,
     borderBottomColor: "rgba(0, 0, 0, 0.05)",
-    backgroundColor: C.white,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 10,
+    elevation: 3,
   },
   headerSafeArea: {
-    paddingBottom: Spacing.two,
+    paddingBottom: Spacing.four,
   },
   headerTop: {
     flexDirection: "row-reverse",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: Spacing.four,
-    marginTop: Spacing.one,
+    marginTop: 12,
   },
   appName: {
     fontSize: FontSize.xl,
@@ -84,12 +89,12 @@ export const indexStyles = StyleSheet.create({
   categoriesScroll: {
     flexDirection: "row-reverse",
     paddingHorizontal: Spacing.four,
-    marginTop: Spacing.two,
+    marginTop: Spacing.two + 2,
     gap: Spacing.two,
   },
   categoryChip: {
     paddingHorizontal: Spacing.three + 2,
-    paddingVertical: Spacing.one,
+    paddingVertical: Spacing.one + 2,
     borderRadius: 20,
     backgroundColor: C.white,
     borderWidth: 1,
@@ -109,7 +114,7 @@ export const indexStyles = StyleSheet.create({
   },
   // ─── Product grid ─────────────────────────────────────────────────────────
   scrollList: {
-    paddingTop: 180,
+    paddingTop: 216,
     paddingBottom: 110,
   },
   columnWrapper: {
@@ -119,20 +124,21 @@ export const indexStyles = StyleSheet.create({
   },
   cardContainer: {
     width: cardWidth,
+    height: 300,
     backgroundColor: C.white,
     borderRadius: 16,
     overflow: "hidden",
     borderWidth: 1,
     borderColor: C.border,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.03,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.015,
+    shadowRadius: 6,
+    elevation: 1,
   },
   imageWrapper: {
     width: "100%",
-    height: 145,
+    height: 150,
     backgroundColor: C.bgElement,
     position: "relative",
   },
@@ -161,8 +167,11 @@ export const indexStyles = StyleSheet.create({
     zIndex: 5,
   },
   cardInfo: {
-    padding: Spacing.two + 2,
-    gap: 4,
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 14,
+    flex: 1,
+    justifyContent: "space-between",
   },
   productName: {
     fontSize: FontSize.base,
@@ -254,8 +263,9 @@ export const indexStyles = StyleSheet.create({
     alignItems: "center",
     marginBottom: Spacing.six,
   },
-  pizzaLogo: {
-    fontSize: 60,
+  logoImage: {
+    width: 90,
+    height: 90,
     marginBottom: Spacing.two,
   },
   brandTitle: {
@@ -315,5 +325,116 @@ export const indexStyles = StyleSheet.create({
     color: C.white,
     fontSize: FontSize.base,
     fontFamily: FontFamily.bold,
+  },
+  sectionContainer: {
+    marginBottom: Spacing.four,
+  },
+  sectionHeader: {
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: Spacing.four,
+    marginBottom: Spacing.two,
+  },
+  sectionTitle: {
+    fontSize: FontSize.lg,
+    fontFamily: FontFamily.bold,
+    color: C.textDark,
+    textAlign: "right",
+  },
+  horizontalList: {
+    paddingHorizontal: Spacing.four,
+    paddingBottom: Spacing.two,
+  },
+  headerTitleRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+  },
+  totalCountBadge: {
+    backgroundColor: C.primary + "15",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    marginRight: 8,
+  },
+  totalCountText: {
+    fontSize: FontSize.xs,
+    fontFamily: FontFamily.bold,
+    color: C.primary,
+  },
+  sectionCount: {
+    fontSize: FontSize.base,
+    fontFamily: FontFamily.medium,
+    color: C.textMuted,
+  },
+  cardMetaRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    gap: 8,
+    marginTop: 2,
+  },
+  cardMetaItem: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 2,
+  },
+  cardMetaText: {
+    fontSize: FontSize.xxs,
+    fontFamily: FontFamily.medium,
+    color: C.textMuted,
+  },
+  productDescSnippet: {
+    fontSize: FontSize.xs,
+    fontFamily: FontFamily.regular,
+    color: C.textMuted,
+    textAlign: "right",
+    lineHeight: 16,
+    marginTop: 4,
+  },
+  cardActionRow: {
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 8,
+  },
+  inlineAddToCartBtn: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: C.primary,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    height: 30,
+  },
+  inlineAddToCartText: {
+    fontSize: FontSize.xs,
+    fontFamily: FontFamily.bold,
+    color: C.white,
+  },
+  inlineQuantitySelector: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: C.primaryLight,
+    borderWidth: 1,
+    borderColor: C.primary,
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    height: 30,
+  },
+  inlineActionBtn: {
+    width: 20,
+    height: 20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  inlineQuantityLabel: {
+    fontSize: FontSize.xs,
+    fontFamily: FontFamily.bold,
+    color: C.primary,
+    minWidth: 16,
+    textAlign: "center",
+    marginHorizontal: 4,
   },
 });

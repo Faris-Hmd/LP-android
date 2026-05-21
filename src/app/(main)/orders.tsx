@@ -6,8 +6,10 @@ import {
   ActivityIndicator,
   Linking,
   Alert,
+  StyleSheet,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
 
 import { ThemedText } from "@/components/themed-text";
@@ -138,49 +140,57 @@ export default function OrdersScreen() {
       : order.status === "Delivered" || order.status === "Cancelled"
   );
 
-  if (loading) {
-    return (
-      <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator size="large" color={C.primary} />
-        <ThemedText style={{ marginTop: Spacing.two, color: C.textMuted }}>جاري تحميل الطلبات...</ThemedText>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.header}>
-          <ThemedText style={styles.headerTitle}>طلباتي</ThemedText>
-        </View>
-
-        <View style={styles.filterBar}>
-          {(["active", "completed"] as const).map((f) => (
-            <TouchableOpacity
-              key={f}
-              style={[styles.filterBtn, { backgroundColor: selectedFilter === f ? C.primary : C.border }]}
-              onPress={() => setSelectedFilter(f)}
-            >
-              <ThemedText style={[styles.filterText, { color: selectedFilter === f ? C.white : C.textDark }]}>
-                {f === "active" ? "الطلبات النشطة" : "المنتهية والملغاة"}
-              </ThemedText>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <FlatList
-          data={filteredOrders}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <OrderCard order={item} />}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <ThemedText style={styles.emptyText}>لا توجد طلبات في هذا القسم حالياً.</ThemedText>
-            </View>
-          }
+      <View style={styles.headerContainer}>
+        <LinearGradient
+          colors={["#FFEBEB", "#FFF3E3"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
         />
-      </SafeAreaView>
+        <SafeAreaView edges={["top"]}>
+          <View style={styles.header}>
+            <ThemedText style={styles.headerTitle}>طلباتي</ThemedText>
+          </View>
+        </SafeAreaView>
+      </View>
+
+      {loading ? (
+        <View style={[styles.mainContent, styles.centered]}>
+          <ActivityIndicator size="large" color={C.primary} />
+          <ThemedText style={{ marginTop: Spacing.two, color: C.textMuted }}>جاري تحميل الطلبات...</ThemedText>
+        </View>
+      ) : (
+        <View style={styles.mainContent}>
+          <View style={styles.filterBar}>
+            {(["active", "completed"] as const).map((f) => (
+              <TouchableOpacity
+                key={f}
+                style={[styles.filterBtn, { backgroundColor: selectedFilter === f ? C.primary : C.border }]}
+                onPress={() => setSelectedFilter(f)}
+              >
+                <ThemedText style={[styles.filterText, { color: selectedFilter === f ? C.white : C.textDark }]}>
+                  {f === "active" ? "الطلبات النشطة" : "المنتهية والملغاة"}
+                </ThemedText>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <FlatList
+            data={filteredOrders}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => <OrderCard order={item} />}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <ThemedText style={styles.emptyText}>لا توجد طلبات في هذا القسم حالياً.</ThemedText>
+              </View>
+            }
+          />
+        </View>
+      )}
     </View>
   );
 }

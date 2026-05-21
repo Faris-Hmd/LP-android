@@ -22,7 +22,7 @@ export default function AppTabs() {
       <TabSlot style={{ height: '100%' }} />
       <TabList asChild>
         <CustomTabList>
-          <TabTrigger name="home" href="/" asChild>
+          <TabTrigger name="home" href={"/" as any} asChild>
             <TabButton>Home</TabButton>
           </TabTrigger>
           <TabTrigger name="cart" href="/cart" asChild>

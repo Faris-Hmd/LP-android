@@ -11,15 +11,19 @@ import {
 } from '@expo-google-fonts/cairo';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import { Stack } from 'expo-router';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+
+import { Platform } from 'react-native';
+import * as NavigationBar from 'expo-navigation-bar';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
 import { CartProvider } from '@/context/CartContext';
 
 // Keep splash screen visible until fonts are loaded
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-export default function TabLayout() {
+export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [loaded, error] = useFonts({
     'Cairo-Regular': Cairo_400Regular,
@@ -27,6 +31,12 @@ export default function TabLayout() {
     'Cairo-SemiBold': Cairo_600SemiBold,
     'Cairo-Bold': Cairo_700Bold,
   });
+
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      NavigationBar.setButtonStyleAsync('dark').catch(() => {});
+    }
+  }, []);
 
   useEffect(() => {
     if (loaded || error) {
@@ -39,12 +49,23 @@ export default function TabLayout() {
   }
 
   return (
-    <CartProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <StatusBar style="dark" />
-        <AnimatedSplashOverlay />
-        <AppTabs />
-      </ThemeProvider>
-    </CartProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <CartProvider>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <StatusBar style="dark" />
+          <AnimatedSplashOverlay />
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(main)" />
+            <Stack.Screen 
+              name="product" 
+              options={{
+                animation: 'fade',
+                animationDuration: 150,
+              }}
+            />
+          </Stack>
+        </ThemeProvider>
+      </CartProvider>
+    </GestureHandlerRootView>
   );
 }

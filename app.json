@@ -1,25 +1,35 @@
 {
   "expo": {
-    "name": "Re-Na-Gauth",
-    "slug": "Re-Na-Gauth",
+    "name": "lp-android",
+    "slug": "lp-android",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "renagauth",
+    "scheme": "lpandroid",
     "userInterfaceStyle": "automatic",
+    "androidNavigationBar": {
+      "visible": "always",
+      "barStyle": "dark-content",
+      "backgroundColor": "#FFFFFF"
+    },
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/images/icon.png"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.faris_hamad.sudanpcshop",
-      "googleServicesFile": "./google-services.json"
+      "package": "com.faris_hamad.lpandroid",
+      "googleServicesFile": "./google-services.json",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyCDm8pNcxc4aAoh4-QHptNopdcqdLRtnbw"
+        }
+      }
     },
     "web": {
       "output": "static",
@@ -30,16 +40,17 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#FFFFFF",
           "android": {
+            "reactNativeArchitectures": ["arm64-v8a"],
             "image": "./assets/images/splash-icon.png",
-            "imageWidth": 76
+            "imageWidth": 120,
+            "imageHeight": 120
           }
         }
       ],
-      "@react-native-google-signin/google-signin",
-      "@react-native-firebase/app",
-      "@react-native-firebase/auth"
+      "@react-native-google-signin/google-signin/app.plugin.js",
+      "expo-build-properties"
     ],
     "experiments": {
       "typedRoutes": true,

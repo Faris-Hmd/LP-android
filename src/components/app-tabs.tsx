@@ -1,57 +1,16 @@
-import {
-  Tabs,
-  TabList,
-  TabTrigger,
-  TabSlot,
-  TabTriggerSlotProps,
-  TabListProps,
-} from 'expo-router/ui';
 import React from 'react';
-import { Pressable, useColorScheme, View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Pressable, useColorScheme } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { usePathname } from 'expo-router';
+import { MaterialTopTabBarProps } from '@react-navigation/material-top-tabs';
 
 import { ThemedText } from './themed-text';
 import { Colors } from '@/constants/theme';
 import { useCart } from '@/context/CartContext';
 
-export default function AppTabs() {
-  const pathname = usePathname();
-  const hideTabBar = pathname.startsWith('/product');
-
-  return (
-    <Tabs>
-      <TabSlot style={{ height: '100%' }} />
-      {!hideTabBar && (
-        <TabList style={styles.absoluteContainer} asChild>
-          <CustomTabList>
-            <TabTrigger name="index" href="/" asChild>
-              <TabButton name="index">الرئيسية</TabButton>
-            </TabTrigger>
-            <TabTrigger name="cart" href="/cart" asChild>
-              <TabButton name="cart">السلة</TabButton>
-            </TabTrigger>
-            <TabTrigger name="orders" href="/orders" asChild>
-              <TabButton name="orders">طلباتي</TabButton>
-            </TabTrigger>
-            <TabTrigger name="profile" href="/profile" asChild>
-              <TabButton name="profile">حسابي</TabButton>
-            </TabTrigger>
-          </CustomTabList>
-        </TabList>
-      )}
-    </Tabs>
-  );
-}
-
-interface TabButtonProps extends TabTriggerSlotProps {
-  name: string;
-}
-
-export function TabButton({ children, name, isFocused, ...props }: TabButtonProps) {
+export default function AppTabs({ state, descriptors, navigation }: MaterialTopTabBarProps) {
+  const insets = useSafeAreaInsets();
   const { cart } = useCart();
-  // Calculate cartCount from cart items quantity
   const cartCount = cart.reduce((acc, item) => acc + (item.p_qu || 1), 0);
 
   const iconMap: Record<string, keyof typeof Feather.glyphMap> = {
@@ -61,41 +20,19 @@ export function TabButton({ children, name, isFocused, ...props }: TabButtonProp
     profile: 'user',
   };
 
-  const iconName = iconMap[name] || 'circle';
+  const labelMap: Record<string, string> = {
+    index: 'الرئيسية',
+    cart: 'السلة',
+    orders: 'طلباتي',
+    profile: 'حسابي',
+  };
 
-  return (
-    <Pressable {...props} style={styles.tabButton}>
-      <View style={styles.iconWrapper}>
-        <Feather
-          name={iconName}
-          size={20}
-          color={isFocused ? '#E53E3E' : '#718096'}
-        />
-        {name === 'cart' && cartCount > 0 && (
-          <View style={styles.badge}>
-            <ThemedText style={styles.badgeText}>{cartCount}</ThemedText>
-          </View>
-        )}
-      </View>
-      <ThemedText
-        style={[
-          styles.tabText,
-          isFocused ? styles.tabTextActive : styles.tabTextInactive,
-        ]}>
-        {children}
-      </ThemedText>
-    </Pressable>
-  );
-}
-
-export function CustomTabList(props: TabListProps) {
-  const insets = useSafeAreaInsets();
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === 'unspecified' || !scheme ? 'light' : scheme];
+  // Tabs rendered in RTL order from left to right (using flex-direction: row-reverse):
+  // profile (Leftmost), orders, cart, index (Rightmost)
+  const order = ['index', 'cart', 'orders', 'profile'];
 
   return (
     <View
-      {...props}
       style={[
         styles.tabListContainer,
         {
@@ -103,23 +40,66 @@ export function CustomTabList(props: TabListProps) {
           paddingBottom: insets.bottom || 12,
           height: 64 + (insets.bottom || 12),
         },
-      ]}>
-      {props.children}
+      ]}
+    >
+      {order.map((tabName) => {
+        const routeIndex = state.routes.findIndex((r) => r.name === tabName);
+        if (routeIndex === -1) return null;
+
+        const route = state.routes[routeIndex];
+        const isFocused = state.index === routeIndex;
+        const iconName = iconMap[tabName] || 'circle';
+        const label = labelMap[tabName] || tabName;
+
+        const onPress = () => {
+          const event = navigation.emit({
+            type: 'tabPress',
+            target: route.key,
+            canPreventDefault: true,
+          });
+
+          if (!isFocused && !event.defaultPrevented) {
+            navigation.navigate(route.name, route.params);
+          }
+        };
+
+        return (
+          <Pressable
+            key={route.key}
+            onPress={onPress}
+            style={styles.tabButton}
+          >
+            <View style={styles.iconWrapper}>
+              <Feather
+                name={iconName}
+                size={20}
+                color={isFocused ? '#E53E3E' : '#718096'}
+              />
+              {tabName === 'cart' && cartCount > 0 && (
+                <View style={styles.badge}>
+                  <ThemedText style={styles.badgeText}>{cartCount}</ThemedText>
+                </View>
+              )}
+            </View>
+            <ThemedText
+              style={[
+                styles.tabText,
+                isFocused ? styles.tabTextActive : styles.tabTextInactive,
+              ]}
+            >
+              {label}
+            </ThemedText>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  absoluteContainer: {
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
-  },
   tabListContainer: {
-    position: 'absolute',
-    bottom: 0,
     width: '100%',
-    flexDirection: 'row-reverse', // RTL alignment
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'space-around',
     borderTopWidth: 1,

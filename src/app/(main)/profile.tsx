@@ -6,8 +6,10 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
+  StyleSheet,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
 
@@ -88,89 +90,97 @@ export default function ProfileScreen() {
     ]);
   };
 
-  if (!user) {
-    return (
-      <View style={[styles.container, styles.centered]}>
-        <ThemedText style={{ color: C.textMuted }}>الرجاء تسجيل الدخول لعرض الملف الشخصي.</ThemedText>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.header}>
-          <ThemedText style={styles.headerTitle}>الملف الشخصي</ThemedText>
+      <View style={styles.headerContainer}>
+        <LinearGradient
+          colors={["#FFEBEB", "#FFF3E3"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+        <SafeAreaView edges={["top"]}>
+          <View style={styles.header}>
+            <ThemedText style={styles.headerTitle}>الملف الشخصي</ThemedText>
+          </View>
+        </SafeAreaView>
+      </View>
+
+      {!user ? (
+        <View style={[styles.mainContent, styles.centered]}>
+          <ThemedText style={{ color: C.textMuted }}>الرجاء تسجيل الدخول لعرض الملف الشخصي.</ThemedText>
         </View>
-
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {/* Bio Card */}
-          <View style={styles.bioCard}>
-            {user.photoURL ? (
-              <Image source={{ uri: user.photoURL }} style={styles.avatar} contentFit="cover" />
-            ) : (
-              <View style={styles.avatarPlaceholder}>
-                <ThemedText style={styles.avatarInitial}>
-                  {user.displayName ? user.displayName[0] : "U"}
-                </ThemedText>
-              </View>
-            )}
-            <ThemedText style={styles.userName}>{user.displayName || "عميلنا المميز"}</ThemedText>
-            <ThemedText style={styles.userEmail}>{user.email}</ThemedText>
-          </View>
-
-          {/* Stats */}
-          <View style={styles.statsContainer}>
-            <View style={styles.statBox}>
-              <ThemedText style={styles.statNumber}>{points}</ThemedText>
-              <ThemedText style={styles.statLabel}>النقاط</ThemedText>
-            </View>
-            <View style={styles.statBox}>
-              <ThemedText style={styles.statNumber}>{totalOrders}</ThemedText>
-              <ThemedText style={styles.statLabel}>إجمالي الطلبات</ThemedText>
-            </View>
-            <View style={styles.statBox}>
-              <ThemedText style={styles.statNumber}>{cartCount}</ThemedText>
-              <ThemedText style={styles.statLabel}>عناصر السلة</ThemedText>
-            </View>
-          </View>
-
-          {/* Address Form */}
-          <View style={styles.formCard}>
-            <ThemedText style={styles.formTitle}>بيانات العنوان الافتراضي</ThemedText>
-            {loading ? (
-              <ActivityIndicator size="small" color={C.primary} style={{ marginVertical: Spacing.four }} />
-            ) : (
-              <View style={styles.form}>
-                <ThemedText style={styles.label}>رقم التواصل</ThemedText>
-                <TextInput style={styles.input} placeholder="أدخل رقم الهاتف..." placeholderTextColor={C.textMuted} value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
-
-                <ThemedText style={styles.label}>عنوان الشارع</ThemedText>
-                <TextInput style={styles.input} placeholder="اسم الشارع والحي ورقم المنزل..." placeholderTextColor={C.textMuted} value={address} onChangeText={setAddress} />
-
-                <View style={styles.rowInputs}>
-                  <View style={{ flex: 1 }}>
-                    <ThemedText style={styles.label}>الرمز البريدي</ThemedText>
-                    <TextInput style={styles.input} placeholder="أدخل الرمز..." placeholderTextColor={C.textMuted} value={zip} onChangeText={setZip} keyboardType="numeric" />
-                  </View>
-                  <View style={{ flex: 1, marginLeft: Spacing.two }}>
-                    <ThemedText style={styles.label}>المدينة</ThemedText>
-                    <TextInput style={styles.input} placeholder="المدينة..." placeholderTextColor={C.textMuted} value={city} onChangeText={setCity} />
-                  </View>
+      ) : (
+        <View style={styles.mainContent}>
+          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            {/* Bio Card */}
+            <View style={styles.bioCard}>
+              {user.photoURL ? (
+                <Image source={{ uri: user.photoURL }} style={styles.avatar} contentFit="cover" />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <ThemedText style={styles.avatarInitial}>
+                    {user.displayName ? user.displayName[0] : "U"}
+                  </ThemedText>
                 </View>
+              )}
+              <ThemedText style={styles.userName}>{user.displayName || "عميلنا المميز"}</ThemedText>
+              <ThemedText style={styles.userEmail}>{user.email}</ThemedText>
+            </View>
 
-                <TouchableOpacity style={[styles.saveBtn, saving && { opacity: 0.7 }]} onPress={handleSaveChanges} disabled={saving}>
-                  {saving ? <ActivityIndicator color={C.white} /> : <ThemedText style={styles.saveBtnText}>حفظ التغييرات</ThemedText>}
-                </TouchableOpacity>
+            {/* Stats */}
+            <View style={styles.statsContainer}>
+              <View style={styles.statBox}>
+                <ThemedText style={styles.statNumber}>{points}</ThemedText>
+                <ThemedText style={styles.statLabel}>النقاط</ThemedText>
               </View>
-            )}
-          </View>
+              <View style={styles.statBox}>
+                <ThemedText style={styles.statNumber}>{totalOrders}</ThemedText>
+                <ThemedText style={styles.statLabel}>إجمالي الطلبات</ThemedText>
+              </View>
+              <View style={styles.statBox}>
+                <ThemedText style={styles.statNumber}>{cartCount}</ThemedText>
+                <ThemedText style={styles.statLabel}>عناصر السلة</ThemedText>
+              </View>
+            </View>
 
-          <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut}>
-            <ThemedText style={styles.signOutText}>تسجيل الخروج</ThemedText>
-          </TouchableOpacity>
-        </ScrollView>
-      </SafeAreaView>
+            {/* Address Form */}
+            <View style={styles.formCard}>
+              <ThemedText style={styles.formTitle}>بيانات العنوان الافتراضي</ThemedText>
+              {loading ? (
+                <ActivityIndicator size="small" color={C.primary} style={{ marginVertical: Spacing.four }} />
+              ) : (
+                <View style={styles.form}>
+                  <ThemedText style={styles.label}>رقم التواصل</ThemedText>
+                  <TextInput style={styles.input} placeholder="أدخل رقم الهاتف..." placeholderTextColor={C.textMuted} value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+
+                  <ThemedText style={styles.label}>عنوان الشارع</ThemedText>
+                  <TextInput style={styles.input} placeholder="اسم الشارع والحي ورقم المنزل..." placeholderTextColor={C.textMuted} value={address} onChangeText={setAddress} />
+
+                  <View style={styles.rowInputs}>
+                    <View style={{ flex: 1 }}>
+                      <ThemedText style={styles.label}>الرمز البريدي</ThemedText>
+                      <TextInput style={styles.input} placeholder="أدخل الرمز..." placeholderTextColor={C.textMuted} value={zip} onChangeText={setZip} keyboardType="numeric" />
+                    </View>
+                    <View style={{ flex: 1, marginLeft: Spacing.two }}>
+                      <ThemedText style={styles.label}>المدينة</ThemedText>
+                      <TextInput style={styles.input} placeholder="المدينة..." placeholderTextColor={C.textMuted} value={city} onChangeText={setCity} />
+                    </View>
+                  </View>
+
+                  <TouchableOpacity style={[styles.saveBtn, saving && { opacity: 0.7 }]} onPress={handleSaveChanges} disabled={saving}>
+                    {saving ? <ActivityIndicator color={C.white} /> : <ThemedText style={styles.saveBtnText}>حفظ التغييرات</ThemedText>}
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+
+            <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut}>
+              <ThemedText style={styles.signOutText}>تسجيل الخروج</ThemedText>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      )}
     </View>
   );
 }
