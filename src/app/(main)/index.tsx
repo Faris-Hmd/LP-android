@@ -1,34 +1,42 @@
-import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
+import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
+import { FirebaseAuthTypes } from "@react-native-firebase/auth";
+import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
-  TouchableOpacity,
-  View,
   ActivityIndicator,
-  Alert,
-  ScrollView,
-  TextInput,
-  StyleSheet,
-  Text,
   Dimensions,
   FlatList,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Image } from "expo-image";
-import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { FirebaseAuthTypes } from "@react-native-firebase/auth";
-import { LinearGradient } from "expo-linear-gradient";
 
 import { ThemedText } from "@/components/themed-text";
+import { useAlert } from "@/context/AlertContext";
 import { AppColors } from "@/constants/theme";
 import { useCart } from "@/context/CartContext";
-import { ProductType } from "@/types";
-import { getProducts, getCachedProducts } from "@/services/productService";
-import { signInWithGoogle, subscribeToAuthChanges, statusCodes } from "@/services/authService";
-import { indexStyles as styles, cardWidth, featuredCardWidth } from "@/styles/index.styles";
+import {
+  signInWithGoogle,
+  statusCodes,
+  subscribeToAuthChanges,
+} from "@/services/authService";
+import { getCachedProducts, getProducts } from "@/services/productService";
+import { getUserOrders } from "@/services/orderService";
+import { indexStyles as styles } from "@/styles/index.styles";
+import { OrderType, ProductType } from "@/types";
 
 const { width } = Dimensions.get("window");
 const C = AppColors;
-
 
 const LabelMap: Record<string, string> = {
   PC: "بيتزا",
@@ -59,27 +67,36 @@ const CATEGORIES = [
 const PROMOTIONS = [
   {
     id: "promo-1",
-    title: "العرض العائلي الكبير 🍕",
-    subtitle: "اطلب بيتزا حجم عائلي واحصل على لتر بيبسي مجاناً!",
-    badge: "الأكثر توفيراً",
-    gradient: ["#E53E3E", "#F59E0B"] as [string, string],
-    image: "https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=300",
+    title: "اليوم علينا",
+    subtitle: "شرح العرض",
+    price: "540",
+    originalPrice: "640",
+    savings: "وفر 100 جنية",
+    tag: "محدود",
+    image:
+      "https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=400",
   },
   {
     id: "promo-2",
-    title: "ساعة التوفير ⏱️",
-    subtitle: "خصم 30% على جميع أنواع السندوتشات من 4 إلى 6 مساءً.",
-    badge: "عرض لفترة محدودة",
-    gradient: ["#EC4899", "#8B5CF6"] as [string, string],
-    image: "https://images.unsplash.com/photo-1509722747041-616f39b57569?q=80&w=300",
+    title: "وجبة التوفير السوبر",
+    subtitle: "بيتزا وسط + ساندوتش + بيبسي",
+    price: "720",
+    originalPrice: "900",
+    savings: "وفر 180 جنية",
+    tag: "مميز",
+    image:
+      "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?q=80&w=400",
   },
   {
     id: "promo-3",
-    title: "نقاط الولاء 🎉",
-    subtitle: "اجمع النقاط مع كل طلب واستبدلها بوجبات مجانية لجميع العائلة.",
-    badge: "برنامج الولاء",
-    gradient: ["#10B981", "#3B82F6"] as [string, string],
-    image: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?q=80&w=300",
+    title: "مكس النكهات",
+    subtitle: "اثنين بيتزا وسط من اختيارك",
+    price: "990",
+    originalPrice: "1200",
+    savings: "وفر 210 جنية",
+    tag: "لفترة محدودة",
+    image:
+      "https://images.unsplash.com/photo-1590947132387-155cc02f3212?q=80&w=400",
   },
 ];
 
@@ -94,6 +111,7 @@ const getProductMeta = (id: string) => {
 };
 
 export default function MenuScreen() {
+  const { showAlert } = useAlert();
   const [user, setUser] = useState<FirebaseAuthTypes.User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [loginLoading, setLoginLoading] = useState(false);
@@ -105,15 +123,22 @@ export default function MenuScreen() {
   const [productsLoading, setProductsLoading] = useState(() => {
     return getCachedProducts() === null;
   });
-  const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [isSearchActive, setIsSearchActive] = useState(false);
-  const searchInputRef = useRef<TextInput>(null);
+  const [recentOrders, setRecentOrders] = useState<OrderType[]>([]);
   const promoScrollRef = useRef<ScrollView>(null);
   const categoriesScrollRef = useRef<ScrollView>(null);
   const featuredScrollRef = useRef<ScrollView>(null);
+  const reorderScrollRef = useRef<ScrollView>(null);
 
-  const { cart, addToCart, updateQuantity } = useCart();
+  const {
+    cart,
+    addToCart,
+    updateQuantity,
+    searchQuery,
+    setSearchQuery,
+    isSearchActive,
+    setIsSearchActive,
+  } = useCart();
 
   // Auth State Listener
   useEffect(() => {
@@ -137,6 +162,35 @@ export default function MenuScreen() {
       .finally(() => setProductsLoading(false));
   }, [user]);
 
+  // Fetch user orders to enable quick reordering
+  useEffect(() => {
+    if (!user || !user.email) {
+      setRecentOrders([]);
+      return;
+    }
+    getUserOrders(user.email)
+      .then(setRecentOrders)
+      .catch((e) => console.error("Error loading user orders for reorder:", e));
+  }, [user]);
+
+  // Extract unique products from user's previous orders
+  const reorderProducts = useMemo(() => {
+    if (!recentOrders || recentOrders.length === 0) return [];
+    const productsMap = new Map<string, ProductType>();
+    recentOrders.forEach((order) => {
+      if (order.productsList) {
+        order.productsList.forEach((item) => {
+          if (item && item.id && !productsMap.has(item.id)) {
+            // Match with active product details to keep price/images updated
+            const activeProduct = products.find((p) => p.id === item.id);
+            productsMap.set(item.id, activeProduct || item);
+          }
+        });
+      }
+    });
+    return Array.from(productsMap.values()).slice(0, 5); // Limit to top 5 items
+  }, [recentOrders, products]);
+
   // Google Sign-In
   const handleGoogleSignIn = async () => {
     setLoginLoading(true);
@@ -146,11 +200,23 @@ export default function MenuScreen() {
       if (error.code === statusCodes.SIGN_IN_CANCELLED) {
         // User cancelled
       } else if (error.code === statusCodes.IN_PROGRESS) {
-        Alert.alert("تنبيه", "عملية تسجيل الدخول جارية بالفعل.");
+        showAlert({
+          title: "تنبيه",
+          message: "عملية تسجيل الدخول جارية بالفعل.",
+          type: "warning",
+        });
       } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        Alert.alert("خطأ", "خدمات Google Play غير متوفرة.");
+        showAlert({
+          title: "خطأ",
+          message: "خدمات Google Play غير متوفرة.",
+          type: "error",
+        });
       } else {
-        Alert.alert("خطأ في تسجيل الدخول", error.message || "حدث خطأ غير متوقع.");
+        showAlert({
+          title: "خطأ في تسجيل الدخول",
+          message: error.message || "حدث خطأ غير متوقع.",
+          type: "error",
+        });
       }
     } finally {
       setLoginLoading(false);
@@ -165,8 +231,9 @@ export default function MenuScreen() {
       const matchesSearch =
         name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         desc.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      const matchesCategory = selectedCategory === "all" || p.p_cat === selectedCategory;
+
+      const matchesCategory =
+        selectedCategory === "all" || p.p_cat === selectedCategory;
       return matchesSearch && matchesCategory;
     });
   }, [products, searchQuery, selectedCategory]);
@@ -177,6 +244,334 @@ export default function MenuScreen() {
       .filter((p) => p.isFeatured || getProductMeta(p.id).rating >= "4.7")
       .slice(0, 6);
   }, [products]);
+
+  const renderItem = useCallback(
+    ({ item }: { item: ProductType }) => {
+      const cartItem = cart.find((c) => c.id === item.id);
+      const quantity = cartItem?.p_qu || 0;
+      return (
+        <View style={{ paddingHorizontal: 16 }}>
+          <StandardProductCard
+            product={item}
+            quantity={quantity}
+            onAddToCart={addToCart}
+            onUpdateQuantity={updateQuantity}
+          />
+        </View>
+      );
+    },
+    [cart, addToCart, updateQuantity],
+  );
+
+  const keyExtractor = useCallback((item: ProductType) => `product-${item.id}`, []);
+  const ItemSeparator = useCallback(() => <View style={{ height: 16 }} />, []);
+
+  const listHeader = useMemo(() => {
+    if (searchQuery) {
+      return (
+        <>
+          {/* Stylized Menu Header */}
+          <View style={styles.stylizedSectionHeader}>
+            <View style={styles.stylizedTitleLine} />
+            <Text style={styles.stylizedTitleText}>
+              نتائج <Text style={{ color: C.primary }}>البحث</Text>
+            </Text>
+            <Text style={styles.stylizedSubtitleText}>
+              نتائج البحث عن "{searchQuery}"
+            </Text>
+          </View>
+
+          {/* Main Menu Section Header */}
+          <View style={[styles.sectionContainer, { marginBottom: 12 }]}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleRow}>
+                <ThemedText style={styles.sectionTitle}>
+                  {selectedCategory === "all" ? "كل الأصناف" : (LabelMap[selectedCategory] || selectedCategory)}
+                </ThemedText>
+                <ThemedText style={styles.sectionCount}>
+                  ({filteredProducts.length} وجبة)
+                </ThemedText>
+              </View>
+            </View>
+          </View>
+        </>
+      );
+    }
+
+    return (
+      <>
+        {/* Welcome & Announcement Banner */}
+        <View style={styles.welcomeBanner}>
+          <View style={styles.welcomeTextContainer}>
+            <Text style={styles.welcomeTitle}>
+              {user?.displayName
+                ? `أهلاً بك، ${user.displayName} 👋`
+                : "مرحباً بك في ليبر بيتزا 👋"}
+            </Text>
+            <Text style={styles.welcomeSubtitle}>
+              جاهز لطلب وجبتك المفضلة اليوم؟
+            </Text>
+          </View>
+          <View style={styles.announcementBadge}>
+            <Feather name="truck" size={15} color={C.primary} />
+            <Text style={styles.announcementText}>
+              توصيل مجاني للطلبات فوق ٢٠٠ جنية 🍕
+            </Text>
+          </View>
+        </View>
+
+        {/* Custom Offers Section */}
+        <View style={styles.stylizedSectionHeader}>
+          <View style={styles.stylizedTitleLine} />
+          <Text style={styles.stylizedTitleText}>
+            عروضنا <Text style={{ color: C.primary }}>الحصرية</Text>
+          </Text>
+          <Text style={styles.stylizedSubtitleText}>
+            وفر أكثر مع باقاتنا العائلية والوجبات المختارة بعناية فائقة
+          </Text>
+        </View>
+
+        <View style={styles.promoContainer}>
+          <ScrollView
+            ref={promoScrollRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.promoList}
+            decelerationRate="fast"
+            snapToInterval={292} // Card width 280 + gap 12
+            snapToAlignment="center"
+            onContentSizeChange={(w) => {
+              promoScrollRef.current?.scrollTo({
+                x: w,
+                animated: false,
+              });
+            }}
+          >
+            {PROMOTIONS.map((promo) => (
+              <View key={promo.id} style={styles.offerCard}>
+                <Image
+                   source={{ uri: promo.image }}
+                   style={styles.offerCardImage}
+                   contentFit="cover"
+                />
+                <View style={styles.offerCardOverlay} />
+
+                {/* Top Left Tags */}
+                <View style={styles.offerTagsContainer}>
+                  <View style={styles.offerTagRed}>
+                    <Text style={styles.offerTagText}>{promo.tag}</Text>
+                  </View>
+                  <View style={styles.offerTagGreen}>
+                    <Text style={styles.offerTagText}>
+                      {promo.savings}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Bottom Row */}
+                <View style={styles.offerBottomRow}>
+                  <TouchableOpacity
+                    style={styles.offerArrowBtn}
+                    activeOpacity={0.8}
+                  >
+                    <Feather
+                      name="arrow-left"
+                      size={16}
+                      color={C.white}
+                    />
+                  </TouchableOpacity>
+                  <View style={styles.offerTextGroup}>
+                    <Text style={styles.offerTitle}>{promo.title}</Text>
+                    <Text style={styles.offerSubtitle}>
+                      {promo.subtitle}
+                    </Text>
+                    <View style={styles.offerPriceRow}>
+                      <Text style={styles.offerPrice}>
+                        {promo.price} جنية
+                      </Text>
+                      {promo.originalPrice && (
+                        <Text style={styles.offerOriginalPrice}>
+                          {promo.originalPrice} جنية
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Quick Reorder Section */}
+        {reorderProducts.length > 0 && (
+          <View style={{ marginBottom: 12 }}>
+            <View style={styles.stylizedSectionHeader}>
+              <View style={styles.stylizedTitleLine} />
+              <Text style={styles.stylizedTitleText}>
+                أطلبها <Text style={{ color: C.primary }}>مجدداً</Text>
+              </Text>
+              <Text style={styles.stylizedSubtitleText}>
+                أعد طلب وجباتك المفضلة من طلباتك السابقة بلمسة واحدة
+              </Text>
+            </View>
+            <ScrollView
+              ref={reorderScrollRef}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalList}
+              style={{ flexGrow: 0 }}
+              onContentSizeChange={(w) => {
+                reorderScrollRef.current?.scrollTo({
+                  x: w,
+                  animated: false,
+                });
+              }}
+            >
+              {reorderProducts.map((item) => {
+                const cartItem = cart.find((c) => c.id === item.id);
+                const quantity = cartItem?.p_qu || 0;
+                return (
+                  <View key={`reorder-${item.id}`}>
+                    <ReorderProductCard
+                      product={item}
+                      quantity={quantity}
+                      onAddToCart={addToCart}
+                      onUpdateQuantity={updateQuantity}
+                    />
+                  </View>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* Stylized Popular Items ("الأكثر طلباً") Header & Horizontal Scroll */}
+        {featuredProducts.length > 0 && (
+          <View style={{ marginBottom: 12 }}>
+            <View style={styles.stylizedSectionHeader}>
+              <View style={styles.stylizedTitleLine} />
+              <Text style={styles.stylizedTitleText}>
+                الأصناف الأكثر{" "}
+                <Text style={{ color: C.primary }}>طلباً</Text>
+              </Text>
+              <Text style={styles.stylizedSubtitleText}>
+                استكشف قائمتنا المختارة من ألذ أنواع البيتزا والوجبات
+                المحضرة بعناية فائقة
+              </Text>
+            </View>
+            <ScrollView
+              ref={featuredScrollRef}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalList}
+              style={{ flexGrow: 0 }}
+              onContentSizeChange={(w) => {
+                featuredScrollRef.current?.scrollTo({
+                  x: w,
+                  animated: false,
+                });
+              }}
+            >
+              {featuredProducts.map((item) => {
+                const cartItem = cart.find((c) => c.id === item.id);
+                const quantity = cartItem?.p_qu || 0;
+                return (
+                  <View key={`featured-${item.id}`}>
+                    <FeaturedProductCard
+                      product={item}
+                      quantity={quantity}
+                      onAddToCart={addToCart}
+                      onUpdateQuantity={updateQuantity}
+                    />
+                  </View>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* Stylized Menu Header */}
+        <View style={styles.stylizedSectionHeader}>
+          <View style={styles.stylizedTitleLine} />
+          <Text style={styles.stylizedTitleText}>
+            قائمة <Text style={{ color: C.primary }}>المأكولات</Text>
+          </Text>
+          <Text style={styles.stylizedSubtitleText}>
+            اختر وجبتك المفضلة من تشكيلتنا المميزة واللذيذة
+          </Text>
+        </View>
+
+        {/* Categories Selector */}
+        <View style={styles.categoriesContainer}>
+          <ScrollView
+            ref={categoriesScrollRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoriesScroll}
+            onContentSizeChange={(w) => {
+              categoriesScrollRef.current?.scrollTo({
+                x: w,
+                animated: false,
+              });
+            }}
+          >
+            {CATEGORIES.map((cat) => {
+              const isSelected = selectedCategory === cat.key;
+              return (
+                <TouchableOpacity
+                  key={cat.key}
+                  style={[
+                    styles.categoryChip,
+                    isSelected && styles.categoryChipSelected,
+                  ]}
+                  onPress={() => handleCategoryPress(cat.key)}
+                  activeOpacity={0.8}
+                >
+                  <MaterialCommunityIcons
+                    name={cat.icon as any}
+                    size={16}
+                    color={isSelected ? C.white : C.primary}
+                  />
+                  <Text
+                    style={[
+                      styles.categoryText,
+                      isSelected && styles.categoryTextSelected,
+                    ]}
+                  >
+                    {cat.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        {/* Main Menu Section Header */}
+        <View style={[styles.sectionContainer, { marginBottom: 12 }]}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionTitleRow}>
+              <ThemedText style={styles.sectionTitle}>
+                {selectedCategory === "all" ? "كل الأصناف" : (LabelMap[selectedCategory] || selectedCategory)}
+              </ThemedText>
+              <ThemedText style={styles.sectionCount}>
+                ({filteredProducts.length} وجبة)
+              </ThemedText>
+            </View>
+          </View>
+        </View>
+      </>
+    );
+  }, [
+    searchQuery,
+    user,
+    reorderProducts,
+    featuredProducts,
+    cart,
+    selectedCategory,
+    filteredProducts.length,
+    addToCart,
+    updateQuantity,
+  ]);
 
   const handleCategoryPress = useCallback((categoryKey: string) => {
     setSelectedCategory(categoryKey);
@@ -196,23 +591,29 @@ export default function MenuScreen() {
         <SafeAreaView style={styles.loginSafeArea}>
           <View style={styles.loginContent}>
             <View style={styles.logoContainer}>
-              <Image 
-                source={require("@/assets/images/logo.png")} 
-                style={styles.logoImage} 
+              <Image
+                source={require("@/assets/images/logo.png")}
+                style={styles.logoImage}
                 contentFit="cover"
               />
               <ThemedText style={styles.brandTitle}>لييبر بيتزا</ThemedText>
-              <ThemedText style={styles.brandSubtitle}>أشهى الوجبات والبيتزا الإيطالية</ThemedText>
+              <ThemedText style={styles.brandSubtitle}>
+                أشهى الوجبات والبيتزا الإيطالية
+              </ThemedText>
             </View>
 
             <View style={styles.loginFormCard}>
               <ThemedText style={styles.welcomeText}>مرحباً بك 👋</ThemedText>
               <ThemedText style={styles.welcomeDesc}>
-                سجل دخولك بحساب Google الآن لتتمتع بالطلب السريع لبيتزا ساخنة ومشروبات باردة أينما كنت.
+                سجل دخولك بحساب Google الآن لتتمتع بالطلب السريع لبيتزا ساخنة
+                ومشروبات باردة أينما كنت.
               </ThemedText>
 
               <TouchableOpacity
-                style={[styles.googleLoginBtn, loginLoading && { opacity: 0.8 }]}
+                style={[
+                  styles.googleLoginBtn,
+                  loginLoading && { opacity: 0.8 },
+                ]}
                 onPress={handleGoogleSignIn}
                 disabled={loginLoading}
                 activeOpacity={0.85}
@@ -222,7 +623,9 @@ export default function MenuScreen() {
                 ) : (
                   <>
                     <Feather name="chrome" size={20} color={C.white} />
-                    <ThemedText style={styles.googleLoginBtnText}>المتابعة باستخدام Google</ThemedText>
+                    <ThemedText style={styles.googleLoginBtnText}>
+                      المتابعة باستخدام Google
+                    </ThemedText>
                   </>
                 )}
               </TouchableOpacity>
@@ -235,228 +638,18 @@ export default function MenuScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Fixed top navigation bar */}
-      <View style={styles.headerContainer}>
-        <SafeAreaView edges={["top"]} style={{ paddingBottom: 0 }}>
-          {isSearchActive ? (
-            <View style={styles.headerSearchActiveRow}>
-              {/* Profile Avatar (Left) */}
-              <Image
-                source={{ uri: user.photoURL || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=150" }}
-                style={styles.userAvatar}
-                contentFit="cover"
-              />
-
-              {/* Search input container (Center) */}
-              <View style={styles.headerSearchActiveInputContainer}>
-                <TextInput
-                  ref={searchInputRef}
-                  style={styles.headerSearchActiveInput}
-                  placeholder="ابحث عن وجبتك المفضلة..."
-                  placeholderTextColor={C.textMuted}
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  autoFocus
-                />
-                {searchQuery.length > 0 ? (
-                  <TouchableOpacity onPress={() => setSearchQuery("")} style={{ padding: 4 }}>
-                    <Feather name="x" size={16} color={C.textMuted} />
-                  </TouchableOpacity>
-                ) : (
-                  <Feather name="search" size={16} color={C.textMuted} />
-                )}
-              </View>
-
-              {/* Close Search Button (Right) */}
-              <TouchableOpacity
-                onPress={() => {
-                  setSearchQuery("");
-                  setIsSearchActive(false);
-                }}
-                style={styles.headerSearchIconBtn}
-              >
-                <Feather name="arrow-right" size={20} color={C.textDark} />
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={styles.headerTop}>
-              {/* Profile Pic & Search Button (Left) */}
-              <View style={styles.headerLeftSide}>
-                <Image
-                  source={{ uri: user.photoURL || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=150" }}
-                  style={styles.userAvatar}
-                  contentFit="cover"
-                />
-                <TouchableOpacity
-                  style={styles.headerSearchIconBtn}
-                  onPress={() => setIsSearchActive(true)}
-                  activeOpacity={0.7}
-                >
-                  <Feather name="search" size={18} color={C.textDark} />
-                </TouchableOpacity>
-              </View>
-
-              {/* App Logo & App Name (Right) */}
-              <View style={styles.headerRightSide}>
-                <Image
-                  source={require("@/assets/images/logo.png")}
-                  style={styles.headerLogo}
-                  contentFit="contain"
-                />
-                <ThemedText style={styles.appName}>لييبر بيتزا</ThemedText>
-              </View>
-            </View>
-          )}
-        </SafeAreaView>
-      </View>
-
       <FlatList
         data={filteredProducts}
-        keyExtractor={(item) => `product-${item.id}`}
-        renderItem={({ item }) => {
-          const cartItem = cart.find((c) => c.id === item.id);
-          const quantity = cartItem?.p_qu || 0;
-          return (
-            <View style={{ paddingHorizontal: 16 }}>
-              <StandardProductCard 
-                product={item} 
-                quantity={quantity}
-                onAddToCart={addToCart}
-                onUpdateQuantity={updateQuantity}
-              />
-            </View>
-          );
-        }}
-        ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
+        ItemSeparatorComponent={ItemSeparator}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 110 }}
-        initialNumToRender={8}
-        maxToRenderPerBatch={10}
-        windowSize={5}
+        initialNumToRender={4}
+        maxToRenderPerBatch={4}
+        windowSize={3}
         removeClippedSubviews={true}
-        ListHeaderComponent={
-          <>
-            {/* Promotion Offers Banner */}
-            <View style={styles.promoContainer}>
-              <ScrollView
-                ref={promoScrollRef}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.promoList}
-                pagingEnabled
-                snapToInterval={width - 36}
-                decelerationRate="fast"
-                onContentSizeChange={(w) => {
-                  promoScrollRef.current?.scrollTo({ x: w, animated: false });
-                }}
-              >
-                {PROMOTIONS.map((promo) => (
-                  <View key={promo.id} style={styles.promoCard}>
-                    <LinearGradient
-                      colors={promo.gradient}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={styles.promoGradient}
-                    >
-                      <View style={styles.promoInfo}>
-                        <View style={styles.promoBadge}>
-                          <Text style={styles.promoBadgeText}>{promo.badge}</Text>
-                        </View>
-                        <Text style={styles.promoTitle}>{promo.title}</Text>
-                        <Text style={styles.promoSubtitle} numberOfLines={2}>{promo.subtitle}</Text>
-                      </View>
-                      <Image source={{ uri: promo.image }} style={styles.promoImage} contentFit="cover" />
-                    </LinearGradient>
-                  </View>
-                ))}
-              </ScrollView>
-            </View>
-
-            {/* Featured Items ("الأكثر طلباً") - Pinned (always visible above categories) */}
-            {!searchQuery && featuredProducts.length > 0 && (
-              <View style={styles.sectionContainer}>
-                <View style={styles.sectionHeader}>
-                  <View style={styles.sectionTitleRow}>
-                    <ThemedText style={styles.sectionTitle}>الأكثر طلباً 🔥</ThemedText>
-                  </View>
-                  <ThemedText style={styles.sectionLink}>عرض الكل</ThemedText>
-                </View>
-                <ScrollView
-                  ref={featuredScrollRef}
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.horizontalList}
-                  style={{ flexGrow: 0 }}
-                  onContentSizeChange={(w) => {
-                    featuredScrollRef.current?.scrollTo({ x: w, animated: false });
-                  }}
-                >
-                  {featuredProducts.map((item) => {
-                    const cartItem = cart.find((c) => c.id === item.id);
-                    const quantity = cartItem?.p_qu || 0;
-                    return (
-                      <View key={`featured-${item.id}`}>
-                        <FeaturedProductCard 
-                          product={item} 
-                          quantity={quantity}
-                          onAddToCart={addToCart}
-                          onUpdateQuantity={updateQuantity}
-                        />
-                      </View>
-                    );
-                  })}
-                </ScrollView>
-              </View>
-            )}
-
-            {/* Categories Selector */}
-            <View style={styles.categoriesContainer}>
-              <ScrollView
-                ref={categoriesScrollRef}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.categoriesScroll}
-                onContentSizeChange={(w) => {
-                  categoriesScrollRef.current?.scrollTo({ x: w, animated: false });
-                }}
-              >
-                {CATEGORIES.map((cat) => {
-                  const isSelected = selectedCategory === cat.key;
-                  return (
-                    <TouchableOpacity
-                      key={cat.key}
-                      style={[
-                        styles.categoryChip, 
-                        isSelected && styles.categoryChipSelected,
-                      ]}
-                      onPress={() => handleCategoryPress(cat.key)}
-                      activeOpacity={0.8}
-                    >
-                      <MaterialCommunityIcons 
-                        name={cat.icon as any} 
-                        size={16} 
-                        color={isSelected ? C.white : C.primary} 
-                      />
-                      <Text style={[styles.categoryText, isSelected && styles.categoryTextSelected]}>
-                        {cat.label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            </View>
-
-            {/* Main Menu Section Header */}
-            <View style={[styles.sectionContainer, { marginBottom: 12 }]}>
-              <View style={styles.sectionHeader}>
-                <View style={styles.sectionTitleRow}>
-                  <ThemedText style={styles.sectionTitle}>قائمة المأكولات</ThemedText>
-                  <ThemedText style={styles.sectionCount}>({filteredProducts.length})</ThemedText>
-                </View>
-              </View>
-            </View>
-          </>
-        }
+        ListHeaderComponent={listHeader}
         ListEmptyComponent={
           productsLoading ? (
             <View style={{ paddingVertical: 40 }}>
@@ -465,7 +658,9 @@ export default function MenuScreen() {
           ) : (
             <View style={styles.emptyListContainer}>
               <Feather name="meh" size={32} color={C.textMuted} />
-              <ThemedText style={styles.emptyListText}>لم نجد أي وجبات تطابقة لبحثك.</ThemedText>
+              <ThemedText style={styles.emptyListText}>
+                لم نجد أي وجبات تطابقة لبحثك.
+              </ThemedText>
             </View>
           )
         }
@@ -482,98 +677,245 @@ interface ProductCardProps {
   onUpdateQuantity: (id: string, qty: number) => void;
 }
 
-const FeaturedProductCard = React.memo(({ product, quantity, onAddToCart, onUpdateQuantity }: ProductCardProps) => {
-  const router = useRouter();
-  const imageUrl =
-    (product.p_imgs && product.p_imgs.length > 0 && product.p_imgs[0].url) ||
-    "https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=300";
-  const price = useMemo(() => parseFloat(product.p_cost as string) || 0, [product.p_cost]);
-  const { rating, calories } = useMemo(() => getProductMeta(product.id), [product.id]);
+const FeaturedProductCard = React.memo(
+  ({ product, quantity, onAddToCart, onUpdateQuantity }: ProductCardProps) => {
+    const router = useRouter();
+    const imageUrl =
+      (product.p_imgs && product.p_imgs.length > 0 && product.p_imgs[0].url) ||
+      "https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=300";
+    const price = useMemo(
+      () => parseFloat(product.p_cost as string) || 0,
+      [product.p_cost],
+    );
+    const { rating, calories } = useMemo(
+      () => getProductMeta(product.id),
+      [product.id],
+    );
 
-  // Local state for instant optimistic updates
-  const [localQty, setLocalQty] = useState(quantity);
+    // Local state for instant optimistic updates
+    const [localQty, setLocalQty] = useState(quantity);
 
-  useEffect(() => {
-    setLocalQty(quantity);
-  }, [quantity]);
+    useEffect(() => {
+      setLocalQty(quantity);
+    }, [quantity]);
 
-  const handleAddToCart = useCallback(() => {
-    setLocalQty(1);
-    onAddToCart(product);
-  }, [product, onAddToCart]);
+    const handleAddToCart = useCallback(() => {
+      setLocalQty(1);
+      onAddToCart(product);
+    }, [product, onAddToCart]);
 
-  const handleIncrement = useCallback(() => {
-    const next = localQty + 1;
-    setLocalQty(next);
-    onUpdateQuantity(product.id, next);
-  }, [product.id, localQty, onUpdateQuantity]);
+    const handleIncrement = useCallback(() => {
+      const next = localQty + 1;
+      setLocalQty(next);
+      onUpdateQuantity(product.id, next);
+    }, [product.id, localQty, onUpdateQuantity]);
 
-  const handleDecrement = useCallback(() => {
-    const next = Math.max(0, localQty - 1);
-    setLocalQty(next);
-    onUpdateQuantity(product.id, next);
-  }, [product.id, localQty, onUpdateQuantity]);
+    const handleDecrement = useCallback(() => {
+      const next = Math.max(0, localQty - 1);
+      setLocalQty(next);
+      onUpdateQuantity(product.id, next);
+    }, [product.id, localQty, onUpdateQuantity]);
 
-  return (
-    <View style={styles.featuredCard}>
-      <TouchableOpacity
-        activeOpacity={0.85}
-        onPress={() => router.push({ pathname: "/product", params: { id: product.id } })}
-      >
-        <View style={styles.featuredImageWrapper}>
-          <Image source={{ uri: imageUrl }} style={styles.featuredImage} contentFit="cover" />
-          <LinearGradient
-            colors={["transparent", "rgba(0,0,0,0.65)"]}
-            style={styles.featuredGradient}
-          />
-          <View style={styles.featuredBadge}>
-            <Text style={styles.featuredBadgeText}>الأكثر طلباً 🔥</Text>
-          </View>
-          <View style={styles.featuredMetaContainer}>
-            <View style={styles.featuredMetaItem}>
-              <Feather name="zap" size={10} color="#FFB800" />
-              <Text style={styles.featuredMetaText}>{calories} سعرة</Text>
+    return (
+      <View style={styles.featuredCard}>
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() =>
+            router.push({ pathname: "/product", params: { id: product.id } })
+          }
+        >
+          <View style={styles.featuredImageWrapper}>
+            <Image
+              source={{ uri: imageUrl }}
+              style={styles.featuredImage}
+              contentFit="cover"
+            />
+            <LinearGradient
+              colors={["transparent", "rgba(0,0,0,0.65)"]}
+              style={styles.featuredGradient}
+            />
+            <View style={styles.featuredBadge}>
+              <Text style={styles.featuredBadgeText}>الأكثر طلباً 🔥</Text>
             </View>
-            <View style={styles.featuredMetaItem}>
-              <Feather name="star" size={10} color="#FFB800" />
-              <Text style={styles.featuredMetaText}>{rating}</Text>
+            <View style={styles.featuredMetaContainer}>
+              <View style={styles.featuredMetaItem}>
+                <Feather name="zap" size={10} color="#FFB800" />
+                <Text style={styles.featuredMetaText}>{calories} سعرة</Text>
+              </View>
+              <View style={styles.featuredMetaItem}>
+                <Feather name="star" size={10} color="#FFB800" />
+                <Text style={styles.featuredMetaText}>{rating}</Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={{ paddingHorizontal: 14, paddingTop: 14, gap: 10 }}>
+            <Text style={styles.featuredName} numberOfLines={1}>
+              {product.p_name}
+            </Text>
+            <Text style={styles.featuredDesc} numberOfLines={1}>
+              {product.p_details ||
+                "وجبة مميزة ومحضرة من أجود المكونات الطازجة."}
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        <View
+          style={{ paddingHorizontal: 14, paddingBottom: 14, paddingTop: 6 }}
+        >
+          <View style={styles.featuredActionRow}>
+            <Text style={styles.productPrice}>
+              {price.toLocaleString()}{" "}
+              <Text style={styles.currencyText}>جنية</Text>
+            </Text>
+
+            <View>
+              {localQty > 0 ? (
+                <View style={styles.inlineQuantitySelector}>
+                  <TouchableOpacity
+                    style={styles.inlineActionBtn}
+                    onPress={handleIncrement}
+                  >
+                    <Feather name="plus" size={12} color={C.primary} />
+                  </TouchableOpacity>
+                  <Text style={styles.inlineQuantityLabel}>{localQty}</Text>
+                  <TouchableOpacity
+                    style={styles.inlineActionBtn}
+                    onPress={handleDecrement}
+                  >
+                    <Feather name="minus" size={12} color="#9CA3AF" />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.inlineAddToCartBtn}
+                  onPress={handleAddToCart}
+                >
+                  <Feather name="shopping-cart" size={14} color={C.white} />
+                  <Text style={styles.inlineAddToCartText}>أضف</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         </View>
+      </View>
+    );
+  },
+);
 
-        <View style={{ paddingHorizontal: 14, paddingTop: 14, gap: 10 }}>
-          <Text style={styles.featuredName} numberOfLines={1}>{product.p_name}</Text>
-          <Text style={styles.featuredDesc} numberOfLines={1}>
-            {product.p_details || "وجبة مميزة ومحضرة من أجود المكونات الطازجة."}
-          </Text>
-        </View>
-      </TouchableOpacity>
+// ─── Standard Card Component ────────────────────────────────────────────────
+const StandardProductCard = React.memo(
+  ({ product, quantity, onAddToCart, onUpdateQuantity }: ProductCardProps) => {
+    const router = useRouter();
+    const imageUrl =
+      (product.p_imgs && product.p_imgs.length > 0 && product.p_imgs[0].url) ||
+      "https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=300";
+    const price = useMemo(
+      () => parseFloat(product.p_cost as string) || 0,
+      [product.p_cost],
+    );
+    const { rating, calories } = useMemo(
+      () => getProductMeta(product.id),
+      [product.id],
+    );
 
-      <View style={{ paddingHorizontal: 14, paddingBottom: 14, paddingTop: 6 }}>
-        <View style={styles.featuredActionRow}>
+    // Local state for instant optimistic updates
+    const [localQty, setLocalQty] = useState(quantity);
+
+    useEffect(() => {
+      setLocalQty(quantity);
+    }, [quantity]);
+
+    const handleAddToCart = useCallback(() => {
+      setLocalQty(1);
+      onAddToCart(product);
+    }, [product, onAddToCart]);
+
+    const handleIncrement = useCallback(() => {
+      const next = localQty + 1;
+      setLocalQty(next);
+      onUpdateQuantity(product.id, next);
+    }, [product.id, localQty, onUpdateQuantity]);
+
+    const handleDecrement = useCallback(() => {
+      const next = Math.max(0, localQty - 1);
+      setLocalQty(next);
+      onUpdateQuantity(product.id, next);
+    }, [product.id, localQty, onUpdateQuantity]);
+
+    return (
+      <View style={styles.cardContainer}>
+        <TouchableOpacity
+          activeOpacity={0.85}
+          style={styles.cardPressableArea}
+          onPress={() =>
+            router.push({ pathname: "/product", params: { id: product.id } })
+          }
+        >
+          <View style={styles.imageWrapper}>
+            <Image
+              source={{ uri: imageUrl }}
+              style={styles.productImage}
+              contentFit="cover"
+            />
+            <View style={styles.categoryBadge}>
+              <Text style={styles.categoryBadgeText}>
+                {LabelMap[product.p_cat] || product.p_cat}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.cardInfo}>
+            <View style={{ gap: 2 }}>
+              <Text style={styles.productName} numberOfLines={1}>
+                {product.p_name}
+              </Text>
+              <View style={styles.cardMetaRow}>
+                <View style={styles.cardMetaItem}>
+                  <Feather name="star" size={10} color="#FFB800" />
+                  <Text style={styles.cardMetaText}>{rating}</Text>
+                </View>
+                <View style={styles.cardMetaItem}>
+                  <Feather name="zap" size={10} color="#FF9800" />
+                  <Text style={styles.cardMetaText}>{calories} سعرة</Text>
+                </View>
+              </View>
+              <Text style={styles.productDescSnippet} numberOfLines={2}>
+                {product.p_details ||
+                  "وجبة شهية ومحضرة بعناية من أفضل المكونات."}
+              </Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        <View style={styles.cardActionRow}>
           <Text style={styles.productPrice}>
-            {price.toLocaleString()} <Text style={styles.currencyText}>SDG</Text>
+            {price.toLocaleString()}{" "}
+            <Text style={styles.currencyText}>جنية</Text>
           </Text>
-          
+
           <View>
             {localQty > 0 ? (
               <View style={styles.inlineQuantitySelector}>
                 <TouchableOpacity
                   style={styles.inlineActionBtn}
-                  onPress={handleDecrement}
+                  onPress={handleIncrement}
                 >
-                  <Feather name="minus" size={14} color={C.primary} />
+                  <Feather name="plus" size={12} color={C.primary} />
                 </TouchableOpacity>
                 <Text style={styles.inlineQuantityLabel}>{localQty}</Text>
                 <TouchableOpacity
                   style={styles.inlineActionBtn}
-                  onPress={handleIncrement}
+                  onPress={handleDecrement}
                 >
-                  <Feather name="plus" size={14} color={C.primary} />
+                  <Feather name="minus" size={12} color="#9CA3AF" />
                 </TouchableOpacity>
               </View>
             ) : (
-              <TouchableOpacity style={styles.inlineAddToCartBtn} onPress={handleAddToCart}>
+              <TouchableOpacity
+                style={styles.inlineAddToCartBtn}
+                onPress={handleAddToCart}
+              >
                 <Feather name="shopping-cart" size={14} color={C.white} />
                 <Text style={styles.inlineAddToCartText}>أضف</Text>
               </TouchableOpacity>
@@ -581,109 +923,105 @@ const FeaturedProductCard = React.memo(({ product, quantity, onAddToCart, onUpda
           </View>
         </View>
       </View>
-    </View>
-  );
-});
+    );
+  },
+);
 
-// ─── Standard Card Component ────────────────────────────────────────────────
-const StandardProductCard = React.memo(({ product, quantity, onAddToCart, onUpdateQuantity }: ProductCardProps) => {
-  const router = useRouter();
-  const imageUrl =
-    (product.p_imgs && product.p_imgs.length > 0 && product.p_imgs[0].url) ||
-    "https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=300";
-  const price = useMemo(() => parseFloat(product.p_cost as string) || 0, [product.p_cost]);
-  const { rating, calories } = useMemo(() => getProductMeta(product.id), [product.id]);
+// ─── Reorder Card Component ──────────────────────────────────────────────────
+const ReorderProductCard = React.memo(
+  ({ product, quantity, onAddToCart, onUpdateQuantity }: ProductCardProps) => {
+    const router = useRouter();
+    const imageUrl =
+      (product.p_imgs && product.p_imgs.length > 0 && product.p_imgs[0].url) ||
+      "https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=300";
+    const price = useMemo(
+      () => parseFloat(product.p_cost as string) || 0,
+      [product.p_cost],
+    );
 
-  // Local state for instant optimistic updates
-  const [localQty, setLocalQty] = useState(quantity);
+    const [localQty, setLocalQty] = useState(quantity);
 
-  useEffect(() => {
-    setLocalQty(quantity);
-  }, [quantity]);
+    useEffect(() => {
+      setLocalQty(quantity);
+    }, [quantity]);
 
-  const handleAddToCart = useCallback(() => {
-    setLocalQty(1);
-    onAddToCart(product);
-  }, [product, onAddToCart]);
+    const handleAddToCart = useCallback(() => {
+      setLocalQty(1);
+      onAddToCart(product);
+    }, [product, onAddToCart]);
 
-  const handleIncrement = useCallback(() => {
-    const next = localQty + 1;
-    setLocalQty(next);
-    onUpdateQuantity(product.id, next);
-  }, [product.id, localQty, onUpdateQuantity]);
+    const handleIncrement = useCallback(() => {
+      const next = localQty + 1;
+      setLocalQty(next);
+      onUpdateQuantity(product.id, next);
+    }, [product.id, localQty, onUpdateQuantity]);
 
-  const handleDecrement = useCallback(() => {
-    const next = Math.max(0, localQty - 1);
-    setLocalQty(next);
-    onUpdateQuantity(product.id, next);
-  }, [product.id, localQty, onUpdateQuantity]);
+    const handleDecrement = useCallback(() => {
+      const next = Math.max(0, localQty - 1);
+      setLocalQty(next);
+      onUpdateQuantity(product.id, next);
+    }, [product.id, localQty, onUpdateQuantity]);
 
-  return (
-    <View style={styles.cardContainer}>
-      <TouchableOpacity
-        activeOpacity={0.85}
-        style={styles.cardPressableArea}
-        onPress={() => router.push({ pathname: "/product", params: { id: product.id } })}
-      >
-        <View style={styles.imageWrapper}>
-          <Image source={{ uri: imageUrl }} style={styles.productImage} contentFit="cover" />
-          <View style={styles.categoryBadge}>
-            <Text style={styles.categoryBadgeText}>
+    return (
+      <View style={styles.reorderCard}>
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() =>
+            router.push({ pathname: "/product", params: { id: product.id } })
+          }
+        >
+          <View style={styles.reorderImageWrapper}>
+            <Image
+              source={{ uri: imageUrl }}
+              style={styles.reorderImage}
+              contentFit="cover"
+            />
+          </View>
+
+          <View style={styles.reorderInfo}>
+            <Text style={styles.reorderName} numberOfLines={1}>
+              {product.p_name}
+            </Text>
+            <Text style={styles.reorderCategory} numberOfLines={1}>
               {LabelMap[product.p_cat] || product.p_cat}
             </Text>
           </View>
-        </View>
+        </TouchableOpacity>
 
-        <View style={styles.cardInfo}>
-          <View style={{ gap: 2 }}>
-            <Text style={styles.productName} numberOfLines={1}>{product.p_name}</Text>
-            <View style={styles.cardMetaRow}>
-              <View style={styles.cardMetaItem}>
-                <Feather name="star" size={10} color="#FFB800" />
-                <Text style={styles.cardMetaText}>{rating}</Text>
+        <View style={styles.reorderActionRow}>
+          <Text style={styles.reorderPrice}>
+            {price.toLocaleString()} <Text style={{ fontSize: 10 }}>جنية</Text>
+          </Text>
+
+          <View>
+            {localQty > 0 ? (
+              <View style={styles.reorderQuantitySelector}>
+                <TouchableOpacity
+                  style={styles.reorderActionBtn}
+                  onPress={handleIncrement}
+                >
+                  <Feather name="plus" size={12} color={C.primary} />
+                </TouchableOpacity>
+                <Text style={styles.reorderQuantityLabel}>{localQty}</Text>
+                <TouchableOpacity
+                  style={styles.reorderActionBtn}
+                  onPress={handleDecrement}
+                >
+                  <Feather name="minus" size={12} color="#9CA3AF" />
+                </TouchableOpacity>
               </View>
-              <View style={styles.cardMetaItem}>
-                <Feather name="zap" size={10} color="#FF9800" />
-                <Text style={styles.cardMetaText}>{calories} سعرة</Text>
-              </View>
-            </View>
-            <Text style={styles.productDescSnippet} numberOfLines={2}>
-              {product.p_details || "وجبة شهية ومحضرة بعناية من أفضل المكونات."}
-            </Text>
+            ) : (
+              <TouchableOpacity
+                style={styles.reorderBtn}
+                onPress={handleAddToCart}
+              >
+                <Feather name="plus" size={14} color={C.white} />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
-      </TouchableOpacity>
-
-      <View style={styles.cardActionRow}>
-        <Text style={styles.productPrice}>
-          {price.toLocaleString()} <Text style={styles.currencyText}>SDG</Text>
-        </Text>
-
-        <View>
-          {localQty > 0 ? (
-            <View style={styles.inlineQuantitySelector}>
-              <TouchableOpacity
-                style={styles.inlineActionBtn}
-                onPress={handleDecrement}
-              >
-                <Feather name="minus" size={14} color={C.primary} />
-              </TouchableOpacity>
-              <Text style={styles.inlineQuantityLabel}>{localQty}</Text>
-              <TouchableOpacity
-                style={styles.inlineActionBtn}
-                onPress={handleIncrement}
-              >
-                <Feather name="plus" size={14} color={C.primary} />
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <TouchableOpacity style={styles.inlineAddToCartBtn} onPress={handleAddToCart}>
-              <Feather name="shopping-cart" size={14} color={C.white} />
-              <Text style={styles.inlineAddToCartText}>أضف</Text>
-            </TouchableOpacity>
-          )}
-        </View>
       </View>
-    </View>
-  );
-});
+    );
+  },
+);
+

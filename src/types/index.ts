@@ -23,6 +23,7 @@ export interface ShippingInfo {
 }
 
 export interface UserProfile {
+  displayName?: string;
   points?: number;
   shippingInfo?: ShippingInfo;
   updatedAt?: string;

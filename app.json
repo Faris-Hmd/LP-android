@@ -8,7 +8,7 @@
     "scheme": "lpandroid",
     "userInterfaceStyle": "automatic",
     "androidNavigationBar": {
-      "visible": "always",
+      "visible": "leanback",
       "barStyle": "dark-content",
       "backgroundColor": "#FFFFFF"
     },
@@ -47,6 +47,12 @@
             "imageWidth": 120,
             "imageHeight": 120
           }
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow lp-android to use your location for delivery address."
         }
       ],
       "@react-native-google-signin/google-signin/app.plugin.js",

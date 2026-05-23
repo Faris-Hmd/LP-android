@@ -3,6 +3,8 @@ import {
   collection,
   getDocs,
   getFirestore,
+  limit,
+  query,
 } from "@react-native-firebase/firestore";
 
 let cachedProducts: ProductType[] | null = null;
@@ -16,7 +18,8 @@ export async function getProducts(forceRefresh = false): Promise<ProductType[]> 
     return cachedProducts;
   }
   const db = getFirestore();
-  const snapshot = await getDocs(collection(db, "products"));
+  const q = query(collection(db, "products"), limit(50));
+  const snapshot = await getDocs(q);
   const items: ProductType[] = [];
   snapshot.forEach((doc) => {
     items.push({ id: doc.id, ...(doc.data() as Omit<ProductType, "id">) });

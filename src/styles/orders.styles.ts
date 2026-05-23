@@ -4,7 +4,7 @@ import { AppColors, FontFamily, FontSize, Spacing, MaxContentWidth } from "@/con
 const C = AppColors;
 
 export const ordersStyles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: C.lightBg },
+  container: { flex: 1, backgroundColor: C.lightBg, paddingTop: Spacing.two },
   centered: { justifyContent: "center", alignItems: "center" },
   safeArea: { flex: 1, maxWidth: MaxContentWidth, width: "100%", alignSelf: "center" },
   headerContainer: {

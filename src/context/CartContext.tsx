@@ -11,12 +11,18 @@ interface CartContextProps {
   clearCart: () => void;
   cartCount: number;
   totalAmount: number;
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
+  isSearchActive: boolean;
+  setIsSearchActive: (active: boolean) => void;
 }
 
 const CartContext = createContext<CartContextProps | undefined>(undefined);
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [cart, setCart] = useState<ProductType[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchActive, setIsSearchActive] = useState(false);
 
   const addToCart = useCallback((product: ProductType) => {
     setCart((prev) => {
@@ -67,7 +73,21 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     clearCart,
     cartCount,
     totalAmount,
-  }), [cart, addToCart, removeFromCart, updateQuantity, clearCart, cartCount, totalAmount]);
+    searchQuery,
+    setSearchQuery,
+    isSearchActive,
+    setIsSearchActive,
+  }), [
+    cart,
+    addToCart,
+    removeFromCart,
+    updateQuantity,
+    clearCart,
+    cartCount,
+    totalAmount,
+    searchQuery,
+    isSearchActive,
+  ]);
 
   return (
     <CartContext.Provider value={contextValue}>

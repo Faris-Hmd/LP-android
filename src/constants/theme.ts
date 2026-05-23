@@ -66,8 +66,8 @@ export const MaxContentWidth = 800;
 
 // ─── App-wide colour palette ─────────────────────────────────────────────────
 export const AppColors = {
-  primary:      '#E53E3E',
-  primaryLight: 'rgba(229, 62, 62, 0.08)',
+  primary:      '#B31111',
+  primaryLight: 'rgba(179, 17, 17, 0.08)',
   white:        '#FFFFFF',
   lightBg:      '#F9FAFB',
   bgElement:    '#F3F4F6',

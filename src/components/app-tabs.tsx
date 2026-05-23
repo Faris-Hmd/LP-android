@@ -5,7 +5,7 @@ import { Feather } from '@expo/vector-icons';
 import { MaterialTopTabBarProps } from '@react-navigation/material-top-tabs';
 
 import { ThemedText } from './themed-text';
-import { Colors } from '@/constants/theme';
+import { Colors, AppColors } from '@/constants/theme';
 import { useCart } from '@/context/CartContext';
 
 export default function AppTabs({ state, descriptors, navigation }: MaterialTopTabBarProps) {
@@ -73,7 +73,7 @@ export default function AppTabs({ state, descriptors, navigation }: MaterialTopT
               <Feather
                 name={iconName}
                 size={20}
-                color={isFocused ? '#E53E3E' : '#718096'}
+                color={isFocused ? AppColors.primary : '#718096'}
               />
               {tabName === 'cart' && cartCount > 0 && (
                 <View style={styles.badge}>
@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   tabTextActive: {
-    color: '#E53E3E',
+    color: AppColors.primary,
     fontFamily: 'Cairo-Bold',
   },
   tabTextInactive: {
@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -2,
     right: 6,
-    backgroundColor: '#DC2626',
+    backgroundColor: AppColors.primary,
     borderRadius: 8,
     width: 16,
     height: 16,

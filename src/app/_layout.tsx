@@ -19,6 +19,7 @@ import * as NavigationBar from 'expo-navigation-bar';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { CartProvider } from '@/context/CartContext';
+import { AlertProvider } from '@/context/AlertContext';
 
 // Keep splash screen visible until fonts are loaded
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -51,20 +52,15 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <CartProvider>
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <StatusBar style="dark" />
-          <AnimatedSplashOverlay />
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(main)" />
-            <Stack.Screen 
-              name="product" 
-              options={{
-                animation: 'fade',
-                animationDuration: 150,
-              }}
-            />
-          </Stack>
-        </ThemeProvider>
+        <AlertProvider>
+          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+            <StatusBar style="dark" />
+            <AnimatedSplashOverlay />
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="(main)" />
+            </Stack>
+          </ThemeProvider>
+        </AlertProvider>
       </CartProvider>
     </GestureHandlerRootView>
   );

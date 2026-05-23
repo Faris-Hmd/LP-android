@@ -1,33 +1,36 @@
-import React, { useState, useEffect } from "react";
+
+
+
+import React, { useCallback, useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  FlatList,
+  Linking,
   TouchableOpacity,
   View,
-  FlatList,
-  ActivityIndicator,
-  Linking,
-  Alert,
-  StyleSheet,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
-import { Feather } from "@expo/vector-icons";
 
 import { ThemedText } from "@/components/themed-text";
+import { useAlert } from "@/context/AlertContext";
 import { AppColors, Spacing } from "@/constants/theme";
 import { getCurrentUser } from "@/services/authService";
-import { getUserOrders, getDriverById } from "@/services/orderService";
+import { getDriverById, getUserOrders } from "@/services/orderService";
 import { ordersStyles as styles } from "@/styles/orders.styles";
-import { OrderType, DriverType } from "@/types";
+import { DriverType, OrderType } from "@/types";
 
 const C = AppColors;
 
 // ─── Helper component: single order card ─────────────────────────────────────
-const OrderCard = ({ order }: { order: OrderType }) => {
+const OrderCard = React.memo(({ order }: { order: OrderType }) => {
+  const { showAlert } = useAlert();
   const [driver, setDriver] = useState<DriverType | null>(null);
   const [loadingDriver, setLoadingDriver] = useState(false);
 
   useEffect(() => {
-    if (!order.driverId) { setDriver(null); return; }
+    if (!order.driverId) {
+      setDriver(null);
+      return;
+    }
     setLoadingDriver(true);
     getDriverById(order.driverId)
       .then(setDriver)
@@ -37,35 +40,72 @@ const OrderCard = ({ order }: { order: OrderType }) => {
 
   const getStatusConfig = (status: string) => {
     switch (status) {
-      case "Processing": return { bg: "rgba(245,158,11,0.1)", color: "#D97706", label: "قيد التحضير" };
-      case "Shipped":    return { bg: "rgba(59,130,246,0.1)", color: "#2563EB",  label: "في الطريق" };
-      case "Delivered":  return { bg: "rgba(16,185,129,0.1)", color: "#059669",  label: "تم التوصيل" };
-      case "Cancelled":  return { bg: "rgba(239,68,68,0.1)",  color: "#DC2626",  label: "ملغي" };
-      default:           return { bg: "rgba(107,114,128,0.1)", color: "#4B5563", label: status };
+      case "Processing":
+        return {
+          bg: "rgba(245,158,11,0.1)",
+          color: "#D97706",
+          label: "قيد التحضير",
+        };
+      case "Shipped":
+        return {
+          bg: "rgba(59,130,246,0.1)",
+          color: "#2563EB",
+          label: "في الطريق",
+        };
+      case "Delivered":
+        return {
+          bg: "rgba(16,185,129,0.1)",
+          color: "#059669",
+          label: "تم التوصيل",
+        };
+      case "Cancelled":
+        return { bg: "rgba(239,68,68,0.1)", color: "#DC2626", label: "ملغي" };
+      default:
+        return { bg: "rgba(107,114,128,0.1)", color: "#4B5563", label: status };
     }
   };
 
   const statusConfig = getStatusConfig(order.status);
   const formattedDate = new Date(order.createdAt).toLocaleDateString("ar-EG", {
-    day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
+    day: "numeric",
+    month: "long",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 
   const handleCall = (phone: string) =>
-    Linking.openURL(`tel:${phone}`).catch(() => Alert.alert("خطأ", "لا يمكن إجراء الاتصال."));
+    Linking.openURL(`tel:${phone}`).catch(() =>
+      showAlert({
+        title: "خطأ",
+        message: "لا يمكن إجراء الاتصال.",
+        type: "error",
+      }),
+    );
 
   const handleWhatsApp = (phone: string) =>
     Linking.openURL(`https://wa.me/${phone.replace(/\+/g, "")}`).catch(() =>
-      Alert.alert("خطأ", "لا يمكن فتح تطبيق WhatsApp."));
+      showAlert({
+        title: "خطأ",
+        message: "لا يمكن فتح تطبيق WhatsApp.",
+        type: "error",
+      }),
+    );
 
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
-        <View style={[styles.statusBadge, { backgroundColor: statusConfig.bg }]}>
-          <ThemedText style={[styles.statusText, { color: statusConfig.color }]}>
+        <View
+          style={[styles.statusBadge, { backgroundColor: statusConfig.bg }]}
+        >
+          <ThemedText
+            style={[styles.statusText, { color: statusConfig.color }]}
+          >
             {statusConfig.label}
           </ThemedText>
         </View>
-        <ThemedText style={styles.orderId}>#{order.id.slice(-6).toUpperCase()}</ThemedText>
+        <ThemedText style={styles.orderId}>
+          #{order.id.slice(-6).toUpperCase()}
+        </ThemedText>
       </View>
 
       <ThemedText style={styles.orderDate}>{formattedDate}</ThemedText>
@@ -75,7 +115,10 @@ const OrderCard = ({ order }: { order: OrderType }) => {
         {order.productsList?.map((product: any, index: number) => (
           <View key={`${order.id}-prod-${index}`} style={styles.productRow}>
             <ThemedText style={styles.productPrice}>
-              {((parseFloat(product.p_cost) || 0) * (product.p_qu || 1)).toLocaleString()} SDG
+              {(
+                (parseFloat(product.p_cost) || 0) * (product.p_qu || 1)
+              ).toLocaleString()}{" "}
+              جنية
             </ThemedText>
             <ThemedText style={styles.productName}>
               {product.p_name} {product.p_qu > 1 ? `x${product.p_qu}` : ""}
@@ -86,7 +129,9 @@ const OrderCard = ({ order }: { order: OrderType }) => {
 
       <View style={styles.divider} />
       <View style={styles.totalRow}>
-        <ThemedText style={styles.totalValue}>{order.totalAmount?.toLocaleString()} SDG</ThemedText>
+        <ThemedText style={styles.totalValue}>
+          {order.totalAmount?.toLocaleString()} جنية
+        </ThemedText>
         <ThemedText style={styles.totalLabel}>المجموع الكلي:</ThemedText>
       </View>
 
@@ -97,36 +142,52 @@ const OrderCard = ({ order }: { order: OrderType }) => {
           ) : driver ? (
             <View style={styles.driverInfoContainer}>
               <View style={styles.driverActions}>
-                <TouchableOpacity style={[styles.driverBtn, styles.callBtn]} onPress={() => handleCall(driver.phone)}>
+                <TouchableOpacity
+                  style={[styles.driverBtn, styles.callBtn]}
+                  onPress={() => handleCall(driver.phone)}
+                >
                   <ThemedText style={styles.driverBtnText}>اتصال</ThemedText>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.driverBtn, styles.waBtn]} onPress={() => handleWhatsApp(driver.phone)}>
+                <TouchableOpacity
+                  style={[styles.driverBtn, styles.waBtn]}
+                  onPress={() => handleWhatsApp(driver.phone)}
+                >
                   <ThemedText style={styles.driverBtnText}>واتساب</ThemedText>
                 </TouchableOpacity>
               </View>
               <View style={styles.driverTextContainer}>
                 <ThemedText style={styles.driverName}>{driver.name}</ThemedText>
-                <ThemedText style={styles.driverVehicle}>المندوب • {driver.vehicle}</ThemedText>
+                <ThemedText style={styles.driverVehicle}>
+                  المندوب • {driver.vehicle}
+                </ThemedText>
               </View>
             </View>
           ) : (
-            <ThemedText style={styles.driverWaiting}>تم تعيين المندوب (بانتظار التفاصيل)</ThemedText>
+            <ThemedText style={styles.driverWaiting}>
+              تم تعيين المندوب (بانتظار التفاصيل)
+            </ThemedText>
           )}
         </View>
       )}
     </View>
   );
-};
+});
 
 // ─── Main Orders Screen ───────────────────────────────────────────────────────
 export default function OrdersScreen() {
   const user = getCurrentUser();
   const [orders, setOrders] = useState<OrderType[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedFilter, setSelectedFilter] = useState<"active" | "completed">("active");
+  const [selectedFilter, setSelectedFilter] = useState<"active" | "completed">(
+    "active",
+  );
 
   useEffect(() => {
-    if (!user) { setOrders([]); setLoading(false); return; }
+    if (!user) {
+      setOrders([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     getUserOrders(user.email!)
       .then(setOrders)
@@ -137,29 +198,23 @@ export default function OrdersScreen() {
   const filteredOrders = orders.filter((order) =>
     selectedFilter === "active"
       ? order.status === "Processing" || order.status === "Shipped"
-      : order.status === "Delivered" || order.status === "Cancelled"
+      : order.status === "Delivered" || order.status === "Cancelled",
   );
+
+  const renderItem = useCallback(({ item }: { item: OrderType }) => (
+    <OrderCard order={item} />
+  ), []);
+
+  const keyExtractor = useCallback((item: OrderType) => item.id, []);
 
   return (
     <View style={styles.container}>
-      <View style={styles.headerContainer}>
-        <LinearGradient
-          colors={["#FFEBEB", "#FFF3E3"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFillObject}
-        />
-        <SafeAreaView edges={["top"]}>
-          <View style={styles.header}>
-            <ThemedText style={styles.headerTitle}>طلباتي</ThemedText>
-          </View>
-        </SafeAreaView>
-      </View>
-
       {loading ? (
         <View style={[styles.mainContent, styles.centered]}>
           <ActivityIndicator size="large" color={C.primary} />
-          <ThemedText style={{ marginTop: Spacing.two, color: C.textMuted }}>جاري تحميل الطلبات...</ThemedText>
+          <ThemedText style={{ marginTop: Spacing.two, color: C.textMuted }}>
+            جاري تحميل الطلبات...
+          </ThemedText>
         </View>
       ) : (
         <View style={styles.mainContent}>
@@ -167,10 +222,21 @@ export default function OrdersScreen() {
             {(["active", "completed"] as const).map((f) => (
               <TouchableOpacity
                 key={f}
-                style={[styles.filterBtn, { backgroundColor: selectedFilter === f ? C.primary : C.border }]}
+                style={[
+                  styles.filterBtn,
+                  {
+                    backgroundColor:
+                      selectedFilter === f ? C.primary : C.border,
+                  },
+                ]}
                 onPress={() => setSelectedFilter(f)}
               >
-                <ThemedText style={[styles.filterText, { color: selectedFilter === f ? C.white : C.textDark }]}>
+                <ThemedText
+                  style={[
+                    styles.filterText,
+                    { color: selectedFilter === f ? C.white : C.textDark },
+                  ]}
+                >
                   {f === "active" ? "الطلبات النشطة" : "المنتهية والملغاة"}
                 </ThemedText>
               </TouchableOpacity>
@@ -179,13 +245,19 @@ export default function OrdersScreen() {
 
           <FlatList
             data={filteredOrders}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => <OrderCard order={item} />}
+            keyExtractor={keyExtractor}
+            renderItem={renderItem}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
+            initialNumToRender={5}
+            maxToRenderPerBatch={5}
+            windowSize={5}
+            removeClippedSubviews={true}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
-                <ThemedText style={styles.emptyText}>لا توجد طلبات في هذا القسم حالياً.</ThemedText>
+                <ThemedText style={styles.emptyText}>
+                  لا توجد طلبات في هذا القسم حالياً.
+                </ThemedText>
               </View>
             }
           />

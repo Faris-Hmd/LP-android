@@ -5,7 +5,6 @@ import {
   ScrollView,
   TextInput,
   ActivityIndicator,
-  Alert,
   Clipboard,
   Modal,
   StyleSheet,
@@ -16,12 +15,10 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import Animated, { FadeInRight, FadeOutLeft, LinearTransition } from "react-native-reanimated";
-import MapView, { Region, UrlTile } from "react-native-maps";
-import * as Location from "expo-location";
-
 import { ThemedText } from "@/components/themed-text";
 import { Spacing, AppColors } from "@/constants/theme";
 import { useCart } from "@/context/CartContext";
+import { useAlert } from "@/context/AlertContext";
 import { getCurrentUser } from "@/services/authService";
 import { getUserProfile } from "@/services/userService";
 import { submitOrder, saveUserShippingOnOrder } from "@/services/orderService";
@@ -29,7 +26,6 @@ import { cartStyles as styles } from "@/styles/cart.styles";
 import { PaymentMethod, ShippingInfo } from "@/types";
 
 const C = AppColors;
-
 const BANKAK_ACCOUNT = "3052845";
 const MYCASHI_ACCOUNT = "0960504030";
 
@@ -37,6 +33,7 @@ export default function CartScreen() {
   const router = useRouter();
   const { cart, removeFromCart, updateQuantity, clearCart, totalAmount } = useCart();
   const user = getCurrentUser();
+  const { showAlert } = useAlert();
 
   const [showCheckout, setShowCheckout] = useState(false);
   const [loadingUser, setLoadingUser] = useState(false);
@@ -49,93 +46,7 @@ export default function CartScreen() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("bankak");
   const [transactionRef, setTransactionRef] = useState("");
 
-  const [isMapVisible, setIsMapVisible] = useState(false);
-  const [mapRegion, setMapRegion] = useState<Region | null>(null);
-  const [mapAddress, setMapAddress] = useState("");
-  const [mapCity, setMapCity] = useState("");
-  const [isGeocoding, setIsGeocoding] = useState(false);
-  const mapViewRef = useRef<MapView>(null);
 
-  const handleOpenMapPicker = async () => {
-    setIsMapVisible(true);
-    try {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert("تنبيه", "يرجى تفعيل صلاحية الوصول للموقع الجغرافي لتحديد عنوان التوصيل.");
-        return;
-      }
-      
-      let loc = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-
-      const initialRegion: Region = {
-        latitude: loc.coords.latitude,
-        longitude: loc.coords.longitude,
-        latitudeDelta: 0.00922,
-        longitudeDelta: 0.00421,
-      };
-
-      setMapRegion(initialRegion);
-      geocodeCoordinates(loc.coords.latitude, loc.coords.longitude);
-    } catch (error) {
-      console.error("Error getting location:", error);
-    }
-  };
-
-  const geocodeCoordinates = async (lat: number, lng: number) => {
-    setIsGeocoding(true);
-    try {
-      const response = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
-      if (response && response.length > 0) {
-        const item = response[0];
-        const street = item.street || item.name || "";
-        const district = item.district || "";
-        const cityName = item.city || item.subregion || "";
-        
-        const formattedAddress = [street, district].filter(Boolean).join(" - ");
-        setMapAddress(formattedAddress || "موقع محدد على الخريطة");
-        setMapCity(cityName || "الخرطوم");
-      } else {
-        setMapAddress("موقع غير معروف");
-      }
-    } catch (error) {
-      setMapAddress("فشل تحديد العنوان الجغرافي");
-    } finally {
-      setIsGeocoding(false);
-    }
-  };
-
-  const handleRegionChangeComplete = (newRegion: Region) => {
-    setMapRegion(newRegion);
-    geocodeCoordinates(newRegion.latitude, newRegion.longitude);
-  };
-
-  const handleCenterOnUser = async () => {
-    try {
-      let loc = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-      mapViewRef.current?.animateToRegion({
-        latitude: loc.coords.latitude,
-        longitude: loc.coords.longitude,
-        latitudeDelta: 0.00922,
-        longitudeDelta: 0.00421,
-      });
-    } catch (error) {
-      console.error("Error centering map:", error);
-    }
-  };
-
-  const handleConfirmLocation = () => {
-    if (mapAddress) {
-      setAddress(mapAddress);
-    }
-    if (mapCity) {
-      setCity(mapCity);
-    }
-    setIsMapVisible(false);
-  };
 
   // Load user shipping details
   useEffect(() => {
@@ -157,18 +68,44 @@ export default function CartScreen() {
 
   const copyToClipboard = (text: string, label: string) => {
     Clipboard.setString(text);
-    Alert.alert("نسخ", `تم نسخ ${label} بنجاح: ${text}`);
+    showAlert({
+      title: "نسخ",
+      message: `تم نسخ ${label} بنجاح: ${text}`,
+      type: "success",
+    });
   };
 
   const handleCheckout = async () => {
-    if (!user) { Alert.alert("تنبيه", "يرجى تسجيل الدخول أولاً."); return; }
-    if (cart.length === 0) { Alert.alert("تنبيه", "سلة المشتريات فارغة."); return; }
+    if (!user) {
+      showAlert({
+        title: "تنبيه",
+        message: "يرجى تسجيل الدخول أولاً.",
+        type: "warning",
+      });
+      return;
+    }
+    if (cart.length === 0) {
+      showAlert({
+        title: "تنبيه",
+        message: "سلة المشتريات فارغة.",
+        type: "warning",
+      });
+      return;
+    }
     if (!address.trim() || !city.trim() || !phone.trim()) {
-      Alert.alert("تنبيه", "يرجى تعبئة الحقول الأساسية: العنوان، المدينة، ورقم الهاتف.");
+      showAlert({
+        title: "تنبيه",
+        message: "يرجى تعبئة الحقول الأساسية: العنوان، المدينة، ورقم الهاتف.",
+        type: "warning",
+      });
       return;
     }
     if (paymentMethod !== "stripe" && !transactionRef.trim()) {
-      Alert.alert("تنبيه", "يرجى إدخال رقم المعاملة المرجعي لتأكيد الدفع.");
+      showAlert({
+        title: "تنبيه",
+        message: "يرجى إدخال رقم المعاملة المرجعي لتأكيد الدفع.",
+        type: "warning",
+      });
       return;
     }
 
@@ -195,20 +132,29 @@ export default function CartScreen() {
 
       await saveUserShippingOnOrder(user.email || user.uid, shipping);
 
-      Alert.alert("نجاح", "تم إرسال طلبك بنجاح! سيتم مراجعته قريباً.", [
-        {
-          text: "موافق",
-          onPress: () => {
-            clearCart();
-            setShowCheckout(false);
-            setTransactionRef("");
-            router.replace("/orders");
+      showAlert({
+        title: "نجاح",
+        message: "تم إرسال طلبك بنجاح! سيتم مراجعته قريباً.",
+        type: "success",
+        buttons: [
+          {
+            text: "موافق",
+            onPress: () => {
+              clearCart();
+              setShowCheckout(false);
+              setTransactionRef("");
+              router.replace("/orders");
+            },
           },
-        },
-      ]);
+        ],
+      });
     } catch (error: any) {
       console.error("Order creation error:", error);
-      Alert.alert("خطأ", "فشل إتمام الطلب. يرجى المحاولة لاحقاً.");
+      showAlert({
+        title: "خطأ",
+        message: "فشل إتمام الطلب. يرجى المحاولة لاحقاً.",
+        type: "error",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -216,28 +162,6 @@ export default function CartScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.headerContainer}>
-        <LinearGradient
-          colors={["#FFEBEB", "#FFF3E3"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFillObject}
-        />
-        <SafeAreaView edges={["top"]}>
-          <View style={styles.header}>
-            <ThemedText style={styles.headerTitle}>سلة المشتريات</ThemedText>
-            {cart.length > 0 && ((address.trim() || city.trim()) ? (
-              <ThemedText style={styles.headerSubtitle}>
-                التوصيل إلى: {address.trim()}، {city.trim()}
-              </ThemedText>
-            ) : (
-              <ThemedText style={styles.headerSubtitle}>
-                لم يتم تحديد عنوان التوصيل بعد
-              </ThemedText>
-            ))}
-          </View>
-        </SafeAreaView>
-      </View>
 
       {cart.length === 0 ? (
         <View style={[styles.mainContent, styles.centered]}>
@@ -255,64 +179,82 @@ export default function CartScreen() {
           <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
             {!showCheckout ? (
               <>
+                {/* Cart Title Section */}
+                <View style={styles.cartTitleSection}>
+                  <ThemedText style={styles.cartTitleText}>سلة المشتريات</ThemedText>
+                  <ThemedText style={styles.cartSubtitleText}>
+                    لديك {cart.reduce((acc, item) => acc + (item.p_qu || 1), 0)} أصناف في سلتك
+                  </ThemedText>
+                </View>
+
                 {/* Cart List */}
                 <View style={styles.listContainer}>
-                {cart.map((item) => {
-                  const imageUri = (item.p_imgs && item.p_imgs.length > 0 && item.p_imgs[0].url)
-                    || "https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=300";
-                  const price = parseFloat(item.p_cost as string) || 0;
-                  return (
-                    <Animated.View
-                      key={item.id}
-                      style={styles.cartItemCard}
-                      entering={FadeInRight.duration(300)}
-                      exiting={FadeOutLeft.duration(300)}
-                      layout={LinearTransition.duration(200)}
-                    >
-                      <Image source={{ uri: imageUri }} style={styles.cartItemImage} contentFit="cover" />
-                      <View style={styles.cartItemDetails}>
-                        <ThemedText style={styles.cartItemName}>{item.p_name}</ThemedText>
-                        <ThemedText style={styles.cartItemCat}>{item.p_cat}</ThemedText>
-                        <ThemedText style={styles.cartItemPrice}>{price.toLocaleString()} SDG</ThemedText>
-                      </View>
-                      <View style={styles.itemQuantityContainer}>
-                        <TouchableOpacity style={styles.actionBtn} onPress={() => updateQuantity(item.id, (item.p_qu || 1) + 1)}>
-                          <Feather name="plus" size={16} color={C.primary} />
-                        </TouchableOpacity>
-                        <ThemedText style={styles.quantityText}>{item.p_qu || 1}</ThemedText>
-                        <TouchableOpacity style={styles.actionBtn} onPress={() => updateQuantity(item.id, (item.p_qu || 1) - 1)}>
-                          <Feather name="minus" size={16} color={C.primary} />
-                        </TouchableOpacity>
-                      </View>
-                      <TouchableOpacity style={styles.deleteBtn} onPress={() => removeFromCart(item.id)}>
-                        <Feather name="trash-2" size={20} color={C.danger} />
-                      </TouchableOpacity>
-                    </Animated.View>
-                  );
-                })}
-              </View>
+                  {cart.map((item) => {
+                    const imageUri = (item.p_imgs && item.p_imgs.length > 0 && item.p_imgs[0].url)
+                      || "https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=300";
+                    const price = parseFloat(item.p_cost as string) || 0;
+                    const itemCategory = item.p_cat === "PC" ? "بيتزا" : item.p_cat === "BG" ? "برجر" : item.p_cat === "DN" ? "دونات" : item.p_cat;
+                    return (
+                      <View
+                        key={item.id}
+                        style={styles.cartItemCard}
+                      >
+                        {/* Product Image on Right */}
+                        <Image source={{ uri: imageUri }} style={styles.cartItemImage} contentFit="cover" />
+                        
+                        {/* Product Details (Middle) */}
+                        <View style={styles.cartItemDetails}>
+                          <ThemedText style={styles.cartItemName}>{item.p_name}</ThemedText>
+                          <ThemedText style={styles.cartItemCat}>{itemCategory}</ThemedText>
+                          <ThemedText style={styles.cartItemPrice}>{price.toLocaleString()} جنية</ThemedText>
+                        </View>
 
-              {/* Order Summary */}
-              <View style={styles.summaryCard}>
-                <ThemedText style={styles.summaryTitle}>ملخص الطلب</ThemedText>
-                <View style={styles.summaryRow}>
-                  <ThemedText style={styles.summaryLabel}>المجموع الفرعي</ThemedText>
-                  <ThemedText style={styles.summaryValue}>{totalAmount.toLocaleString()} SDG</ThemedText>
+                        {/* Pill Counter (Bottom Left) */}
+                        <View style={styles.itemQuantityContainer}>
+                          {/* Plus on Left */}
+                          <TouchableOpacity style={styles.actionBtn} onPress={() => updateQuantity(item.id, (item.p_qu || 1) + 1)}>
+                            <Feather name="plus" size={12} color={C.primary} />
+                          </TouchableOpacity>
+                          
+                          {/* Quantity in Middle */}
+                          <ThemedText style={styles.quantityText}>{item.p_qu || 1}</ThemedText>
+                          
+                          {/* Minus on Right */}
+                          <TouchableOpacity style={styles.actionBtn} onPress={() => updateQuantity(item.id, (item.p_qu || 1) - 1)}>
+                            <Feather name="minus" size={12} color="#9CA3AF" />
+                          </TouchableOpacity>
+                        </View>
+
+                        {/* Delete Button (Top Left) */}
+                        <TouchableOpacity style={styles.deleteBtn} onPress={() => removeFromCart(item.id)}>
+                          <Feather name="trash-2" size={16} color="#9CA3AF" />
+                        </TouchableOpacity>
+                      </View>
+                    );
+                  })}
                 </View>
-                <View style={styles.summaryRow}>
-                  <ThemedText style={styles.summaryLabel}>رسوم التوصيل</ThemedText>
-                  <ThemedText style={styles.freeDelivery}>مجاني</ThemedText>
+
+                {/* Order Summary */}
+                <View style={styles.summaryCard}>
+                  <ThemedText style={styles.summaryTitle}>ملخص الطلب</ThemedText>
+                  <View style={styles.summaryRow}>
+                    <ThemedText style={styles.summaryLabel}>المجموع الفرعي</ThemedText>
+                    <ThemedText style={styles.summaryValue}>{totalAmount.toLocaleString()} جنية</ThemedText>
+                  </View>
+                  <View style={styles.summaryRow}>
+                    <ThemedText style={styles.summaryLabel}>رسوم التوصيل</ThemedText>
+                    <ThemedText style={styles.freeDelivery}>مجاني</ThemedText>
+                  </View>
+                  <View style={styles.divider} />
+                  <View style={styles.summaryRow}>
+                    <ThemedText style={styles.totalLabel}>الإجمالي كلياً</ThemedText>
+                    <ThemedText style={styles.totalValue}>{totalAmount.toLocaleString()} جنية</ThemedText>
+                  </View>
+                  <TouchableOpacity style={styles.checkoutBtn} onPress={() => setShowCheckout(true)}>
+                    <ThemedText style={styles.checkoutBtnText}>إتمام الطلب بأمان</ThemedText>
+                  </TouchableOpacity>
                 </View>
-                <View style={styles.divider} />
-                <View style={styles.summaryRow}>
-                  <ThemedText style={styles.totalLabel}>الإجمالي كلياً</ThemedText>
-                  <ThemedText style={styles.totalValue}>{totalAmount.toLocaleString()} SDG</ThemedText>
-                </View>
-                <TouchableOpacity style={styles.checkoutBtn} onPress={() => setShowCheckout(true)}>
-                  <ThemedText style={styles.checkoutBtnText}>إتمام الطلب بأمان</ThemedText>
-                </TouchableOpacity>
-              </View>
-            </>
+              </>
           ) : (
             <View style={styles.checkoutContainer}>
               <View style={styles.checkoutHeader}>
@@ -326,32 +268,63 @@ export default function CartScreen() {
                 <ActivityIndicator size="small" color={C.primary} style={{ marginVertical: Spacing.four }} />
               ) : (
                 <View style={styles.form}>
-                  <ThemedText style={styles.label}>رقم التواصل</ThemedText>
-                  <TextInput style={styles.input} placeholder="أدخل رقم الهاتف..." placeholderTextColor={C.textMuted} value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
-
-                  <ThemedText style={styles.label}>عنوان الشارع</ThemedText>
-                  <View style={styles.addressInputRow}>
-                    <TextInput
-                      style={[styles.input, styles.addressInput]}
-                      placeholder="مثال: شارع النيل، عمارة 4..."
-                      placeholderTextColor={C.textMuted}
-                      value={address}
-                      onChangeText={setAddress}
-                    />
-                    <TouchableOpacity style={styles.mapPickerBtn} onPress={handleOpenMapPicker}>
-                      <Feather name="map-pin" size={20} color={C.primary} />
-                    </TouchableOpacity>
-                  </View>
-
-                  <View style={styles.rowInputs}>
-                    <View style={{ flex: 1 }}>
-                      <ThemedText style={styles.label}>الرمز البريدي</ThemedText>
-                      <TextInput style={styles.input} placeholder="الرمز..." placeholderTextColor={C.textMuted} value={zip} onChangeText={setZip} keyboardType="numeric" />
+                  {/* Read-only Location Details Card */}
+                  <View style={styles.locationDetailsCard}>
+                    <View style={styles.locationDetailsHeader}>
+                      <Feather name="map-pin" size={16} color={C.primary} />
+                      <ThemedText style={styles.locationDetailsTitle}>عنوان التوصيل المحدد</ThemedText>
                     </View>
-                    <View style={{ flex: 1, marginLeft: Spacing.two }}>
-                      <ThemedText style={styles.label}>المدينة</ThemedText>
-                      <TextInput style={styles.input} placeholder="مثال: الخرطوم..." placeholderTextColor={C.textMuted} value={city} onChangeText={setCity} />
-                    </View>
+                    
+                    {(!address.trim() || !city.trim() || !phone.trim()) ? (
+                      <LinearGradient
+                        colors={["#FFF5F5", "#FFE3E3"]}
+                        style={styles.emptyLocationWarningGradient}
+                      >
+                        <View style={styles.emptyLocationWarningContent}>
+                          <Feather name="alert-triangle" size={20} color={C.primary} style={{ marginBottom: 4 }} />
+                          <ThemedText style={styles.emptyLocationText}>
+                            لم يتم حفظ بيانات التوصيل أو رقم الهاتف بعد. يرجى ملء بيانات العنوان في ملفك الشخصي لتتمكن من إتمام الطلب.
+                          </ThemedText>
+                          <TouchableOpacity 
+                            style={styles.goToProfileBtn} 
+                            onPress={() => {
+                              setShowCheckout(false);
+                              router.replace("/profile" as any);
+                            }}
+                          >
+                            <ThemedText style={styles.goToProfileBtnText}>الذهاب لحسابي لإضافة العنوان</ThemedText>
+                          </TouchableOpacity>
+                        </View>
+                      </LinearGradient>
+                    ) : (
+                      <View style={styles.locationInfoBody}>
+                        <View style={styles.locationInfoRow}>
+                          <ThemedText style={styles.locationLabelText}>رقم الهاتف</ThemedText>
+                          <ThemedText style={styles.locationValueText}>{phone}</ThemedText>
+                        </View>
+                        <View style={styles.locationInfoRow}>
+                          <ThemedText style={styles.locationLabelText}>العنوان</ThemedText>
+                          <ThemedText style={styles.locationValueText}>{address}</ThemedText>
+                        </View>
+                        <View style={styles.locationInfoRow}>
+                          <ThemedText style={styles.locationLabelText}>المدينة</ThemedText>
+                          <ThemedText style={styles.locationValueText}>{city}</ThemedText>
+                        </View>
+                        {zip ? (
+                          <View style={styles.locationInfoRow}>
+                            <ThemedText style={styles.locationLabelText}>الرمز البريدي</ThemedText>
+                            <ThemedText style={styles.locationValueText}>{zip}</ThemedText>
+                          </View>
+                        ) : null}
+                        
+                        <View style={styles.locationHintBox}>
+                          <Feather name="info" size={14} color={C.textMuted} />
+                          <ThemedText style={styles.locationHintText}>
+                            لتغيير عنوان التوصيل أو رقم الهاتف، يرجى الانتقال إلى صفحة حسابي.
+                          </ThemedText>
+                        </View>
+                      </View>
+                    )}
                   </View>
 
                   <View style={styles.formDivider} />
@@ -374,7 +347,7 @@ export default function CartScreen() {
                   {paymentMethod !== "stripe" && (
                     <View style={styles.manualPayCard}>
                       <ThemedText style={styles.manualPayInstruction}>
-                        حول المبلغ ({totalAmount.toLocaleString()} SDG) إلى الحساب التالي:
+                        حول المبلغ ({totalAmount.toLocaleString()} جنية) إلى الحساب التالي:
                       </ThemedText>
                       <View style={styles.accountRow}>
                         <TouchableOpacity
@@ -421,59 +394,6 @@ export default function CartScreen() {
       </View>
       )}
 
-      <Modal visible={isMapVisible} animationType="slide" onRequestClose={() => setIsMapVisible(false)}>
-        <SafeAreaView style={styles.modalContainer} edges={["top", "bottom"]}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity style={styles.closeBtn} onPress={() => setIsMapVisible(false)}>
-              <Feather name="x" size={24} color={C.textDark} />
-            </TouchableOpacity>
-            <ThemedText style={styles.modalTitle}>تحديد موقع التوصيل</ThemedText>
-            <View style={{ width: 32 }} />
-          </View>
-          
-          <View style={styles.mapWrapper}>
-            {mapRegion && (
-              <MapView
-                ref={mapViewRef}
-                style={styles.mapView}
-                initialRegion={mapRegion}
-                onRegionChangeComplete={handleRegionChangeComplete}
-                mapType="none"
-              >
-                <UrlTile
-                  urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  maximumZ={19}
-                  tileSize={256}
-                />
-              </MapView>
-            )}
-            
-            {/* Centered pinpoint marker */}
-            <View style={styles.markerFixed} pointerEvents="none">
-              <Feather name="map-pin" size={40} color={C.primary} />
-            </View>
-
-            {/* GPS Locate Button */}
-            <TouchableOpacity style={styles.gpsBtn} onPress={handleCenterOnUser}>
-              <Feather name="crosshair" size={24} color={C.textDark} />
-            </TouchableOpacity>
-
-            {/* Address Overlay Card */}
-            <View style={styles.mapOverlayCard}>
-              <ThemedText style={styles.mapOverlayTitle}>موقع التوصيل المحدد</ThemedText>
-              {isGeocoding ? (
-                <ActivityIndicator size="small" color={C.primary} style={{ marginVertical: Spacing.one }} />
-              ) : (
-                <ThemedText style={styles.mapOverlayAddress}>{mapAddress || "يرجى تحريك الخريطة لتحديد الموقع..."}</ThemedText>
-              )}
-              
-              <TouchableOpacity style={styles.mapConfirmBtn} onPress={handleConfirmLocation} disabled={isGeocoding}>
-                <ThemedText style={styles.mapConfirmText}>تأكيد هذا العنوان</ThemedText>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </SafeAreaView>
-      </Modal>
     </View>
   );
 }

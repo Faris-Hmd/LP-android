@@ -17,14 +17,14 @@ import Animated, { FadeInDown, FadeIn, SharedTransition } from "react-native-rea
 const customTransition = SharedTransition.duration(150);
 
 const AnimatedImage = Animated.createAnimatedComponent(Image);
-import { Spacing } from "@/constants/theme";
+import { Spacing, AppColors } from "@/constants/theme";
 import { useCart } from "@/context/CartContext";
 import { getProducts, getCachedProductById } from "@/services/productService";
 
 const { width } = Dimensions.get("window");
 
 const LIGHT_BG = "#F9FAFB";
-const PRIMARY = "#E53E3E";
+const PRIMARY = AppColors.primary;
 const WHITE = "#FFFFFF";
 const TEXT_DARK = "#1F2937";
 const TEXT_MUTED = "#6B7280";
@@ -185,7 +185,7 @@ export default function ProductDetailScreen() {
         contentContainerStyle={styles.scrollContent}
       >
         {/* Main Cover Image */}
-        <View style={styles.imageContainer}>
+        <View style={[styles.imageContainer, { backgroundColor: LIGHT_BG }]}>
           <AnimatedImage
             sharedTransitionTag={`img-${product.id}`}
             sharedTransitionStyle={customTransition}
@@ -220,7 +220,7 @@ export default function ProductDetailScreen() {
           {/* Title & Price */}
           <View style={styles.titlePriceRow}>
             <ThemedText style={styles.productName}>{product.p_name}</ThemedText>
-            <ThemedText style={styles.productPrice}>{price.toLocaleString()} SDG</ThemedText>
+            <ThemedText style={styles.productPrice}>{price.toLocaleString()} جنية</ThemedText>
           </View>
 
 
@@ -259,7 +259,7 @@ export default function ProductDetailScreen() {
       {/* Bottom Cart Action Bar */}
       <Animated.View
         key={`bottom-${product.id}`}
-        style={[styles.bottomBarContainer, { paddingBottom: 16 + insets.bottom }]}
+        style={[styles.bottomBarContainer, { paddingBottom: 16 }]}
         entering={FadeInDown.delay(30).duration(150)}
       >
         {quantityInCart > 0 ? (
@@ -279,14 +279,14 @@ export default function ProductDetailScreen() {
                 style={styles.quantityBtn}
                 onPress={() => updateQuantity(product.id, quantityInCart + 1)}
               >
-                <Feather name="plus" size={16} color={PRIMARY} />
+                <Feather name="plus" size={12} color={PRIMARY} />
               </TouchableOpacity>
               <ThemedText style={styles.quantityLabel}>{quantityInCart}</ThemedText>
               <TouchableOpacity
                 style={styles.quantityBtn}
                 onPress={() => updateQuantity(product.id, quantityInCart - 1)}
               >
-                <Feather name="minus" size={16} color={PRIMARY} />
+                <Feather name="minus" size={12} color="#9CA3AF" />
               </TouchableOpacity>
             </View>
           </View>
@@ -532,32 +532,36 @@ const styles = StyleSheet.create({
     fontFamily: "Cairo-Bold",
   },
   actionQuantityWrapper: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     backgroundColor: BG_ELEMENT,
-    borderRadius: 14,
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-    gap: 6,
-    alignSelf: "center",
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    gap: 8,
+    height: 36,
   },
   quantityBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 8,
     backgroundColor: WHITE,
     justifyContent: "center",
     alignItems: "center",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
-    shadowRadius: 2,
+    shadowRadius: 1,
     elevation: 1,
   },
   quantityLabel: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: "Cairo-Bold",
     color: TEXT_DARK,
-    marginHorizontal: 8,
+    marginHorizontal: 10,
+    minWidth: 20,
+    textAlign: "center",
   },
 });
