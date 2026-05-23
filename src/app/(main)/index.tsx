@@ -22,16 +22,16 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
-import { useAlert } from "@/context/AlertContext";
 import { AppColors } from "@/constants/theme";
+import { useAlert } from "@/context/AlertContext";
 import { useCart } from "@/context/CartContext";
 import {
   signInWithGoogle,
   statusCodes,
   subscribeToAuthChanges,
 } from "@/services/authService";
-import { getCachedProducts, getProducts } from "@/services/productService";
 import { getUserOrders } from "@/services/orderService";
+import { getCachedProducts, getProducts } from "@/services/productService";
 import { indexStyles as styles } from "@/styles/index.styles";
 import { OrderType, ProductType } from "@/types";
 
@@ -69,7 +69,7 @@ const PROMOTIONS = [
     id: "promo-1",
     title: "اليوم علينا",
     subtitle: "شرح العرض",
-    price: "540",
+    price: "590",
     originalPrice: "640",
     savings: "وفر 100 جنية",
     tag: "محدود",
@@ -263,7 +263,10 @@ export default function MenuScreen() {
     [cart, addToCart, updateQuantity],
   );
 
-  const keyExtractor = useCallback((item: ProductType) => `product-${item.id}`, []);
+  const keyExtractor = useCallback(
+    (item: ProductType) => `product-${item.id}`,
+    [],
+  );
   const ItemSeparator = useCallback(() => <View style={{ height: 16 }} />, []);
 
   const listHeader = useMemo(() => {
@@ -286,7 +289,9 @@ export default function MenuScreen() {
             <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleRow}>
                 <ThemedText style={styles.sectionTitle}>
-                  {selectedCategory === "all" ? "كل الأصناف" : (LabelMap[selectedCategory] || selectedCategory)}
+                  {selectedCategory === "all"
+                    ? "كل الأصناف"
+                    : LabelMap[selectedCategory] || selectedCategory}
                 </ThemedText>
                 <ThemedText style={styles.sectionCount}>
                   ({filteredProducts.length} وجبة)
@@ -350,9 +355,9 @@ export default function MenuScreen() {
             {PROMOTIONS.map((promo) => (
               <View key={promo.id} style={styles.offerCard}>
                 <Image
-                   source={{ uri: promo.image }}
-                   style={styles.offerCardImage}
-                   contentFit="cover"
+                  source={{ uri: promo.image }}
+                  style={styles.offerCardImage}
+                  contentFit="cover"
                 />
                 <View style={styles.offerCardOverlay} />
 
@@ -362,9 +367,7 @@ export default function MenuScreen() {
                     <Text style={styles.offerTagText}>{promo.tag}</Text>
                   </View>
                   <View style={styles.offerTagGreen}>
-                    <Text style={styles.offerTagText}>
-                      {promo.savings}
-                    </Text>
+                    <Text style={styles.offerTagText}>{promo.savings}</Text>
                   </View>
                 </View>
 
@@ -374,21 +377,13 @@ export default function MenuScreen() {
                     style={styles.offerArrowBtn}
                     activeOpacity={0.8}
                   >
-                    <Feather
-                      name="arrow-left"
-                      size={16}
-                      color={C.white}
-                    />
+                    <Feather name="arrow-left" size={16} color={C.white} />
                   </TouchableOpacity>
                   <View style={styles.offerTextGroup}>
                     <Text style={styles.offerTitle}>{promo.title}</Text>
-                    <Text style={styles.offerSubtitle}>
-                      {promo.subtitle}
-                    </Text>
+                    <Text style={styles.offerSubtitle}>{promo.subtitle}</Text>
                     <View style={styles.offerPriceRow}>
-                      <Text style={styles.offerPrice}>
-                        {promo.price} جنية
-                      </Text>
+                      <Text style={styles.offerPrice}>{promo.price} جنية</Text>
                       {promo.originalPrice && (
                         <Text style={styles.offerOriginalPrice}>
                           {promo.originalPrice} جنية
@@ -451,12 +446,11 @@ export default function MenuScreen() {
             <View style={styles.stylizedSectionHeader}>
               <View style={styles.stylizedTitleLine} />
               <Text style={styles.stylizedTitleText}>
-                الأصناف الأكثر{" "}
-                <Text style={{ color: C.primary }}>طلباً</Text>
+                الأصناف الأكثر <Text style={{ color: C.primary }}>طلباً</Text>
               </Text>
               <Text style={styles.stylizedSubtitleText}>
-                استكشف قائمتنا المختارة من ألذ أنواع البيتزا والوجبات
-                المحضرة بعناية فائقة
+                استكشف قائمتنا المختارة من ألذ أنواع البيتزا والوجبات المحضرة
+                بعناية فائقة
               </Text>
             </View>
             <ScrollView
@@ -551,7 +545,9 @@ export default function MenuScreen() {
           <View style={styles.sectionHeader}>
             <View style={styles.sectionTitleRow}>
               <ThemedText style={styles.sectionTitle}>
-                {selectedCategory === "all" ? "كل الأصناف" : (LabelMap[selectedCategory] || selectedCategory)}
+                {selectedCategory === "all"
+                  ? "كل الأصناف"
+                  : LabelMap[selectedCategory] || selectedCategory}
               </ThemedText>
               <ThemedText style={styles.sectionCount}>
                 ({filteredProducts.length} وجبة)
@@ -1024,4 +1020,3 @@ const ReorderProductCard = React.memo(
     );
   },
 );
-
